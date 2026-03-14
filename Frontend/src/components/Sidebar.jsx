@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 
 const NAV = [
@@ -12,7 +12,7 @@ const NAV = [
     icon: '📦',
     children: [
       { label: 'Products',           icon: '📋', to: '/products' },
-      { label: 'Stock by Location',  icon: '📍', to: '/products/stock' },
+      { label: 'Stock',  icon: '📍', to: '/products/stock' },
       { label: 'Categories',         icon: '🏷️', to: '/products/categories' },
       { label: 'Reordering Rules',   icon: '🔁', to: '/products/reorder' },
     ],

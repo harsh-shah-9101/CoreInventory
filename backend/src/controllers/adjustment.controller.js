@@ -71,6 +71,12 @@ exports.validateAdjustment = async (req, res) => {
       VALUES ($1, $2, 'ADJUSTMENT', $3, 'adjustments', $4)
     `, [adjustment.product_id, adjustment.warehouse_id, adjustment.qty_change, adjustment.reference]);
 
+    // ++ Update actual product stock
+    await pool.query(
+      "UPDATE products SET qty_on_hand = qty_on_hand + $1 WHERE id = $2",
+      [adjustment.qty_change, adjustment.product_id]
+    );
+
     // Update adjustment status
     const updatedAdjRes = await pool.query(
       "UPDATE adjustments SET status = 'Done' WHERE id = $1 RETURNING *",

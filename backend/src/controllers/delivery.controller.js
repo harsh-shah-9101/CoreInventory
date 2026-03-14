@@ -76,6 +76,12 @@ exports.validateDelivery = async (req, res) => {
       VALUES ($1, $2, 'DELIVERY', $3, 'deliveries', $4)
     `, [delivery.product_id, delivery.warehouse_id, -delivery.qty, delivery.reference]);
 
+    // ++ Update actual product stock
+    await pool.query(
+      "UPDATE products SET qty_on_hand = qty_on_hand - $1 WHERE id = $2",
+      [delivery.qty, delivery.product_id]
+    );
+
     // Update delivery status
     const updatedDeliveryRes = await pool.query(
       "UPDATE deliveries SET status = 'Done' WHERE id = $1 RETURNING *",

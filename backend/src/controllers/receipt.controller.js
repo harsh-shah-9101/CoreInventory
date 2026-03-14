@@ -65,11 +65,17 @@ exports.validateReceipt = async (req, res) => {
       VALUES ($1, $2, 'RECEIPT', $3, 'receipts', $4)
     `, [receipt.product_id, receipt.warehouse_id, receipt.qty, receipt.reference]);
 
-    // Update receipt status
-    const updatedReceiptRes = await pool.query(
-      "UPDATE receipts SET status = 'Done' WHERE id = $1 RETURNING *",
-      [id]
-    );
+      // ++ Update actual product stock
+      await pool.query(
+        "UPDATE products SET qty_on_hand = qty_on_hand + $1 WHERE id = $2",
+        [receipt.qty, receipt.product_id]
+      );
+
+      // Set receipt status to Done
+      const updatedReceiptRes = await pool.query(
+        "UPDATE receipts SET status = 'Done' WHERE id = $1 RETURNING *",
+        [id]
+      );
 
     await pool.query('COMMIT'); // Commit transaction
     res.json({ receipt: updatedReceiptRes.rows[0], message: 'Receipt validated and stock updated' });

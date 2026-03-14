@@ -8,7 +8,7 @@ import WarehouseDashboard from './components/WarehouseDashboard';
 // Layout & Pages
 import Layout from './components/Layout';
 import Products from './pages/Products';
-import StockByLocation from './pages/StockByLocation';
+import Stock from './pages/Stock';
 import ProductCategories from './pages/ProductCategories';
 import ReorderingRules from './pages/ReorderingRules';
 import Receipts from './pages/Receipts';
@@ -36,7 +36,7 @@ function App() {
           
           {/* Products */}
           <Route path="/products"            element={<Layout><Products /></Layout>} />
-          <Route path="/products/stock"      element={<Layout><StockByLocation /></Layout>} />
+          <Route path="/products/stock"      element={<Layout><Stock /></Layout>} />
           <Route path="/products/categories" element={<Layout><ProductCategories /></Layout>} />
           <Route path="/products/reorder"    element={<Layout><ReorderingRules /></Layout>} />
           

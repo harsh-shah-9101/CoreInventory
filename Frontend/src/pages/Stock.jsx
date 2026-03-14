@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 
-const StockByLocation = () => {
+const Stock = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -160,4 +160,4 @@ const StockByLocation = () => {
   );
 };
 
-export default StockByLocation;
+export default Stock;
