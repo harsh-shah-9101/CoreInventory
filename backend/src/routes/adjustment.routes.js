@@ -1,3 +1,8 @@
 const router = require('express').Router();
-// TODO: Implement adjustment routes
+const { createAdjustment, getAdjustments, validateAdjustment } = require('../controllers/adjustment.controller');
+
+router.get('/', getAdjustments);
+router.post('/', createAdjustment);
+router.post('/:id/validate', validateAdjustment);
+
 module.exports = router;

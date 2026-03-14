@@ -4,7 +4,7 @@ const pool = require('../config/db');
 exports.getProducts = async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT p.*, c.name AS category 
+      SELECT p.*, c.name AS category, p.unit_of_measure 
       FROM products p
       LEFT JOIN categories c ON c.id = p.category_id
       ORDER BY p.created_at DESC
@@ -18,7 +18,7 @@ exports.getProducts = async (req, res) => {
 
 // POST /api/products
 exports.createProduct = async (req, res) => {
-  const { name, sku, category, qty, price } = req.body;
+  const { name, sku, category, qty, price, unit_of_measure } = req.body;
   try {
     // Basic implementation: Find or create category (simplified)
     let categoryId = null;
@@ -33,8 +33,8 @@ exports.createProduct = async (req, res) => {
     }
 
     const result = await pool.query(
-      'INSERT INTO products (name, sku, category_id, qty_on_hand, price, created_at) VALUES ($1, $2, $3, $4, $5, NOW()) RETURNING *',
-      [name, sku, categoryId, qty || 0, price || 0]
+      'INSERT INTO products (name, sku, category_id, qty_on_hand, price, unit_of_measure, created_at) VALUES ($1, $2, $3, $4, $5, $6, NOW()) RETURNING *',
+      [name, sku, categoryId, qty || 0, price || 0, unit_of_measure || 'Units']
     );
     res.status(21).json({ product: result.rows[0] });
   } catch (err) {
@@ -46,7 +46,7 @@ exports.createProduct = async (req, res) => {
 // PUT /api/products/:id
 exports.updateProduct = async (req, res) => {
   const { id } = req.params;
-  const { name, sku, category, qty, price } = req.body;
+  const { name, sku, category, qty, price, unit_of_measure } = req.body;
   try {
     let categoryId = null;
     if (category) {
@@ -60,8 +60,8 @@ exports.updateProduct = async (req, res) => {
     }
 
     const result = await pool.query(
-      'UPDATE products SET name = $1, sku = $2, category_id = $3, qty_on_hand = $4, price = $5 WHERE id = $6 RETURNING *',
-      [name, sku, categoryId, qty || 0, price || 0, id]
+      'UPDATE products SET name = $1, sku = $2, category_id = $3, qty_on_hand = $4, price = $5, unit_of_measure = $6 WHERE id = $7 RETURNING *',
+      [name, sku, categoryId, qty || 0, price || 0, unit_of_measure || 'Units', id]
     );
     if (!result.rows.length) return res.status(404).json({ error: 'Product not found' });
     res.json({ product: result.rows[0] });
@@ -95,11 +95,11 @@ exports.updateStock = async (req, res) => {
 exports.getStockByLocation = async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT p.name AS product, w.name AS warehouse, w.location, 
-             COALESCE(ps.qty, 0) AS on_hand, 0 AS reserved, COALESCE(ps.qty, 0) AS available
+      SELECT p.name AS product, p.unit_of_measure, w.name AS warehouse, w.location, 
+             COALESCE(sv.calculated_qty, 0) AS on_hand, 0 AS reserved, COALESCE(sv.calculated_qty, 0) AS available
       FROM products p
       CROSS JOIN warehouses w
-      LEFT JOIN product_stock ps ON ps.product_id = p.id AND ps.warehouse_id = w.id
+      LEFT JOIN current_stock_view sv ON sv.product_id = p.id AND sv.warehouse_id = w.id
       ORDER BY p.name ASC, w.name ASC
     `);
     res.json({ stock: result.rows });
