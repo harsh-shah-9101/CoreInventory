@@ -3,6 +3,7 @@ import api from '../services/api';
 
 const ReorderingRules = () => {
   const [rules, setRules] = useState([]);
+  const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -10,25 +11,29 @@ const ReorderingRules = () => {
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState('');
 
-  const fetchRules = async () => {
+  const fetchData = async () => {
     setLoading(true); setError('');
     try {
-      const res = await api.get('/products/reorder-rules');
-      setRules(res.data?.rules || res.data || []);
-    } catch { setError('Failed to load reordering rules.'); }
+      const [rulesRes, prodsRes] = await Promise.all([
+        api.get('/products/reorder-rules'),
+        api.get('/products')
+      ]);
+      setRules(rulesRes.data?.rules || rulesRes.data || []);
+      setProducts(prodsRes.data?.products || prodsRes.data || []);
+    } catch { setError('Failed to load data.'); }
     finally { setLoading(false); }
   };
 
-  useEffect(() => { fetchRules(); }, []);
+  useEffect(() => { fetchData(); }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault(); setSaving(true); setError(''); setSuccess('');
     try {
       await api.post('/products/reorder-rules', form);
-      setSuccess('Rule created!');
+      setSuccess('Rule created/updated!');
       setShowForm(false);
       setForm({ product: '', min_qty: 0, max_qty: 0, reorder_qty: 0 });
-      fetchRules();
+      fetchData();
     } catch { setError('Failed to create rule.'); }
     finally { setSaving(false); }
   };
@@ -57,7 +62,10 @@ const ReorderingRules = () => {
         <div className="bg-[#1e1e2e] rounded-xl p-5 mb-6 border border-[#2a2a3e]">
           <h2 className="font-semibold mb-4 text-[#c0c0d8]">New Reordering Rule</h2>
           <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
-            <input className={`${inputClass} col-span-2`} placeholder="Product Name / ID" value={form.product} onChange={e => setForm(f => ({ ...f, product: e.target.value }))} required />
+            <select className={`${inputClass} col-span-2`} value={form.product} onChange={e => setForm(f => ({ ...f, product: e.target.value }))} required>
+              <option value="">Select Product...</option>
+              {products.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+            </select>
             <div><label className="text-xs text-[#6b6b8a] mb-1 block">Min Qty</label><input className={inputClass} type="number" min="0" value={form.min_qty} onChange={e => setForm(f => ({ ...f, min_qty: +e.target.value }))} /></div>
             <div><label className="text-xs text-[#6b6b8a] mb-1 block">Max Qty</label><input className={inputClass} type="number" min="0" value={form.max_qty} onChange={e => setForm(f => ({ ...f, max_qty: +e.target.value }))} /></div>
             <div><label className="text-xs text-[#6b6b8a] mb-1 block">Reorder Qty</label><input className={inputClass} type="number" min="0" value={form.reorder_qty} onChange={e => setForm(f => ({ ...f, reorder_qty: +e.target.value }))} /></div>
