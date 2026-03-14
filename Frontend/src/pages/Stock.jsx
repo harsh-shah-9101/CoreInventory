@@ -54,7 +54,6 @@ const Stock = () => {
                       <th>Warehouse</th>
                       <th>Location</th>
                       <th className="text-right">On Hand</th>
-                      <th className="text-right">Reserved</th>
                       <th className="text-right">Available</th>
                     </tr>
                   </thead>
@@ -69,7 +68,7 @@ const Stock = () => {
                         <td className="text-right" style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
                           {record.on_hand} <span style={{ fontSize: '0.75rem', color: '#A1A1AA', fontWeight: 'normal' }}>{record.unit_of_measure}</span>
                         </td>
-                        <td className="text-right" style={{ fontFamily: 'var(--font-mono)', color: '#A1A1AA' }}>{record.reserved}</td>
+
                         <td className="text-right" style={{ fontFamily: 'var(--font-mono)', color: '#52525B' }}>{record.available}</td>
                       </tr>
                     ))}
