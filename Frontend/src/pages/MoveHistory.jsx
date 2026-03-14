@@ -51,7 +51,6 @@ const MoveHistory = () => {
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-4">
             Move History
-            <button className="text-sm bg-transparent border border-[#6c63ff] font-medium text-[#6c63ff] px-3 py-1 rounded hover:bg-[#6c63ff]/10">NEW</button>
           </h1>
           <p className="text-[#a0a0b8] text-sm mt-1">Chronological log of all stock movements and adjustments</p>
         </div>
