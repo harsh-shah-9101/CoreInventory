@@ -3,11 +3,12 @@ const sendEmail = require('../utils/sendEmail');
 
 // SIGNUP
 exports.signup = async (req, res) => {
-  const { name, email, password } = req.body;
+  const { name, email, password, role } = req.body;
+  const userRole = role === 'warehouse_staff' ? 'warehouse_staff' : 'manager';
   try {
     const result = await pool.query(
-      'INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING id, name, email',
-      [name, email, password]
+      'INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role',
+      [name, email, password, userRole]
     );
     res.status(201).json({ message: 'Account created', user: result.rows[0] });
   } catch (err) {
@@ -28,8 +29,8 @@ exports.login = async (req, res) => {
   if (user.password !== password)
     return res.status(401).json({ error: 'Invalid credentials' });
 
-  // Save user in session
-  req.session.user = { id: user.id, name: user.name, email: user.email };
+  // Save user in session (including role)
+  req.session.user = { id: user.id, name: user.name, email: user.email, role: user.role };
   res.json({ message: 'Login successful', user: req.session.user });
 };
 
