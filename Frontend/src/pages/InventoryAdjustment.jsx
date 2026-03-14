@@ -1,79 +1,159 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-import StatusDropdown from '../components/StatusDropdown';
 
 const InventoryAdjustment = () => {
   const [ops, setOps] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [warehouses, setWarehouses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [saving, setSaving] = useState(false);
+  
+  const [form, setForm] = useState({ 
+    productId: '', 
+    warehouseId: '', 
+    qtyChange: '', 
+    reason: ''
+  });
 
-  const fetchAdjustments = async () => {
+  const fetchData = async () => {
     setLoading(true); setError('');
     try {
-      const res = await api.get('/dashboard/stats', { params: { docType: 'Adjustments' } });
-      setOps(res.data?.operations || []);
-    } catch { setError('Failed to load inventory adjustments.'); }
+      const [recRes, prodRes, warRes] = await Promise.all([
+        api.get('/adjustments'),
+        api.get('/products'),
+        api.get('/warehouses')
+      ]);
+      setOps(recRes.data?.adjustments || []);
+      setProducts(prodRes.data?.products || []);
+      setWarehouses(warRes.data?.warehouses || []);
+    } catch { 
+      setError('Failed to load adjustments.'); 
+    }
     finally { setLoading(false); }
   };
 
-  useEffect(() => { fetchAdjustments(); }, []);
+  useEffect(() => { fetchData(); }, []);
 
-  const handleStatusUpdate = (id, newStatus) => {
-    setOps(prev => prev.map(op => op.id === id ? { ...op, status: newStatus } : op));
+  const handleCreate = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await api.post('/adjustments', form);
+      setShowForm(false);
+      setForm({ ...form, qtyChange: '', productId: '', reason: '' });
+      fetchData();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to create adjustment.');
+    } finally {
+      setSaving(false);
+    }
   };
+
+  const handleValidate = async (id) => {
+    if (!window.confirm('Validate this adjustment? This will permanently modify stock levels.')) return;
+    try {
+      await api.post(`/adjustments/${id}/validate`);
+      fetchData();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Validation failed');
+    }
+  };
+
+  const inputClass = 'w-full bg-[#2a2a3e] border border-[#3a3a55] text-[#e2e2f0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#6c63ff] transition-colors';
 
   return (
     <div className="p-6 text-[#e2e2f0]">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white">Inventory Adjustment</h1>
-        <p className="text-[#a0a0b8] text-sm mt-1">Manual stock correction and cycle counting</p>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+           <h1 className="text-2xl font-bold text-white">Stock Adjustments</h1>
+           <p className="text-[#a0a0b8] text-sm mt-1">Correct stock levels based on physical counts</p>
+        </div>
+        <button
+          onClick={() => setShowForm(f => !f)}
+          className="px-4 py-2 bg-[#6c63ff] hover:bg-[#5a52e0] text-white rounded-lg text-sm font-medium transition-colors"
+        >
+          {showForm ? '✕ Cancel' : '＋ New Adjustment'}
+        </button>
       </div>
 
       {error && <div className="mb-4 p-3 bg-red-900/40 border border-red-700 text-red-300 rounded-lg text-sm">{error}</div>}
 
+       {/* Create Form */}
+      {showForm && (
+        <div className="bg-[#1e1e2e] rounded-xl p-5 mb-6 border border-[#2a2a3e]">
+          <h2 className="font-semibold mb-4 text-[#c0c0d8]">Draft Physical Count Adjustment</h2>
+          <form onSubmit={handleCreate} className="grid grid-cols-2 gap-4">
+            
+            <select className={inputClass} value={form.productId} onChange={e => setForm(f => ({ ...f, productId: e.target.value }))} required>
+              <option value="">Select Product...</option>
+              {products.map(p => <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>)}
+            </select>
+
+             <select className={inputClass} value={form.warehouseId} onChange={e => setForm(f => ({ ...f, warehouseId: e.target.value }))} required>
+              <option value="">Warehouse...</option>
+              {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+            </select>
+
+            <input className={inputClass} placeholder="Quantity Diff (e.g. -5 or +10)" type="number" value={form.qtyChange} onChange={e => setForm(f => ({ ...f, qtyChange: +e.target.value }))} required />
+            <input className={inputClass} placeholder="Reason (e.g. Broken in transit)" value={form.reason} onChange={e => setForm(f => ({ ...f, reason: e.target.value }))} required />
+            
+            <button type="submit" disabled={saving} className="col-span-2 px-4 py-2 bg-[#6c63ff] hover:bg-[#5a52e0] text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50">
+              {saving ? 'Creating…' : 'Create Draft Adjustment'}
+            </button>
+          </form>
+        </div>
+      )}
+
       <div className="bg-[#1e1e2e] rounded-xl overflow-hidden border border-[#2a2a3e]">
         <div className="px-5 py-4 border-b border-[#2a2a3e] flex items-center justify-between">
-          <h2 className="font-semibold text-[#c0c0d8]">Adjustment Records</h2>
+          <h2 className="font-semibold text-[#c0c0d8]">All Adjustments</h2>
           <span className="text-xs text-[#6b6b8a]">{ops.length} records</span>
         </div>
         {loading ? (
-          <div className="p-10 text-center flex flex-col items-center">
-            <div className="w-8 h-8 border-4 border-[#6c63ff] border-t-transparent rounded-full animate-spin mb-3" />
-            <p className="text-[#a0a0b8] text-sm">Loading…</p>
-          </div>
+          <div className="p-10 text-center"><div className="w-8 h-8 border-4 border-[#6c63ff] border-t-transparent rounded-full animate-spin mx-auto mb-3" /><p className="text-[#a0a0b8] text-sm">Loading…</p></div>
         ) : ops.length === 0 ? (
-          <div className="p-10 text-center"><p className="text-4xl mb-2">🔧</p><p className="text-[#a0a0b8]">No adjustments found.</p></div>
+          <div className="p-10 text-center"><p className="text-4xl mb-2">⚖️</p><p className="text-[#a0a0b8]">No adjustments found.</p></div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead><tr className="bg-[#16162a] text-[#a0a0b8] text-xs uppercase">
                 <th className="px-5 py-4 text-left">Reference</th>
                 <th className="px-5 py-4 text-left">Product</th>
-                <th className="px-5 py-4 text-right">Adjustment Qty</th>
+                <th className="px-5 py-4 text-right">Diff</th>
                 <th className="px-5 py-4 text-left">Warehouse</th>
+                <th className="px-5 py-4 text-left">Reason</th>
                 <th className="px-5 py-4 text-left">Status</th>
-                <th className="px-5 py-4 text-left">Date</th>
+                <th className="px-5 py-4 text-right">Actions</th>
               </tr></thead>
               <tbody className="divide-y divide-[#2a2a3e]">
                 {ops.map((op, i) => (
                   <tr key={op.id || i} className="hover:bg-[#252538] transition-colors">
                     <td className="px-5 py-4 font-mono text-[#a89eff] font-medium">{op.reference}</td>
-                    <td className="px-5 py-4 text-[#e2e2f0]">{op.product}</td>
-                    <td className={`px-5 py-4 text-right font-semibold ${op.qty > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {op.qty > 0 ? `+${op.qty}` : op.qty}
+                    <td className="px-5 py-4 text-[#e2e2f0]">{op.product_name}</td>
+                    <td className={`px-5 py-4 text-right font-semibold ${op.qty_change > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {op.qty_change > 0 ? `+${op.qty_change}` : op.qty_change}
                     </td>
-                    <td className="px-5 py-4 text-[#a0a0b8]">{op.warehouse}</td>
+                    <td className="px-5 py-4 text-[#a0a0b8]">{op.warehouse_name}</td>
+                    <td className="px-5 py-4 text-[#a0a0b8] truncate max-w-[200px]">{op.reason}</td>
                     <td className="px-5 py-4">
-                      <StatusDropdown
-                        type="adjustments"
-                        id={op.id}
-                        currentStatus={op.status}
-                        allowedStatuses={['Draft', 'Done', 'Canceled']}
-                        onUpdated={handleStatusUpdate}
-                      />
+                       <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                        op.status === 'Done' ? 'bg-green-900/40 border border-green-700 text-green-300' 
+                        : 'bg-yellow-900/40 border border-yellow-700 text-yellow-300'
+                      }`}>
+                        {op.status}
+                      </span>
                     </td>
-                    <td className="px-5 py-4 text-[#6b6b8a] text-xs">
-                      {op.scheduled_date ? new Date(op.scheduled_date).toLocaleDateString() : '—'}
+                    <td className="px-5 py-4 text-right">
+                       {op.status !== 'Done' && (
+                         <button
+                          onClick={() => handleValidate(op.id)}
+                          className="px-3 py-1 bg-[#6c63ff] hover:bg-[#5a52e0] text-white rounded-lg text-xs font-medium transition-colors"
+                        >
+                          Validate 
+                        </button>
+                       )}
                     </td>
                   </tr>
                 ))}
