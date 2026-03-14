@@ -60,17 +60,10 @@ const ManagerDashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-[#13131f] text-[#e2e2f0] p-6">
-      {/* Header */}
+    <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <div className="flex items-center gap-3 mb-1">
-            <span className="bg-[#6c63ff]/20 text-[#6c63ff] text-xs font-semibold px-3 py-1 rounded-full border border-[#6c63ff]/30">
-              📋 Inventory Manager
-            </span>
-            <span className="text-[#6b6b8a] text-sm">Welcome, {user.name}</span>
-          </div>
-          <h1 className="text-3xl font-bold text-white">Manager Dashboard</h1>
+          <h1 className="text-2xl font-bold text-white">Manager Dashboard</h1>
           <p className="text-[#a0a0b8] text-sm mt-1">Manage receipts &amp; deliveries — update statuses below</p>
         </div>
         <button onClick={fetchData} className="px-4 py-2 bg-[#6c63ff] hover:bg-[#5a52e0] text-white rounded-lg text-sm font-medium transition-colors">
