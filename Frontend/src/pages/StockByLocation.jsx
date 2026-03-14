@@ -153,10 +153,6 @@ const StockByLocation = () => {
               })
             )}
           </div>
-          
-          <div className="mt-20 text-center text-[#e2e2f0] font-medium" style={{fontFamily: 'cursive', letterSpacing: '1px'}}>
-            User must be able to update the stock from here.
-          </div>
 
         </div>
       )}
