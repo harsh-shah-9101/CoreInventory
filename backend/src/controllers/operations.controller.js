@@ -41,43 +41,39 @@ exports.updateStatus = async (req, res) => {
 exports.getHistory = async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT r.created_at AS date, r.reference, p.name AS product, NULL AS from_location, w.name AS to_location, r.qty, 'Receipt' AS type, u.name AS user_name
+      SELECT r.created_at AS date, r.reference, p.name AS product, NULL AS from_location, w.name AS to_location, r.qty, 'Receipt' AS type, u.name AS contact, r.status
       FROM receipts r
       JOIN products p ON p.id = r.product_id
       JOIN warehouses w ON w.id = r.warehouse_id
       LEFT JOIN users u ON u.id = 1 -- Placeholder for simplicity
-      WHERE r.status = 'Done'
       
       UNION ALL
       
-      SELECT d.created_at AS date, d.reference, p.name AS product, w.name AS from_location, NULL AS to_location, d.qty, 'Delivery' AS type, u.name AS user_name
+      SELECT d.created_at AS date, d.reference, p.name AS product, w.name AS from_location, NULL AS to_location, d.qty, 'Delivery' AS type, u.name AS contact, d.status
       FROM deliveries d
       JOIN products p ON p.id = d.product_id
       JOIN warehouses w ON w.id = d.warehouse_id
       LEFT JOIN users u ON u.id = 1
-      WHERE d.status = 'Done'
       
       UNION ALL
       
-      SELECT t.created_at AS date, t.reference, p.name AS product, fw.name AS from_location, tw.name AS to_location, t.qty, 'Transfer' AS type, u.name AS user_name
+      SELECT t.created_at AS date, t.reference, p.name AS product, fw.name AS from_location, tw.name AS to_location, t.qty, 'Transfer' AS type, u.name AS contact, t.status
       FROM transfers t
       JOIN products p ON p.id = t.product_id
       JOIN warehouses fw ON fw.id = t.from_warehouse_id
       JOIN warehouses tw ON tw.id = t.to_warehouse_id
       LEFT JOIN users u ON u.id = 1
-      WHERE t.status = 'Done'
       
       UNION ALL
       
-      SELECT a.created_at AS date, a.reference, p.name AS product, NULL AS from_location, w.name AS to_location, a.qty_change AS qty, 'Adjustment' AS type, u.name AS user_name
+      SELECT a.created_at AS date, a.reference, p.name AS product, NULL AS from_location, w.name AS to_location, a.qty_change AS qty, 'Adjustment' AS type, u.name AS contact, a.status
       FROM adjustments a
       JOIN products p ON p.id = a.product_id
       JOIN warehouses w ON w.id = a.warehouse_id
       LEFT JOIN users u ON u.id = 1
-      WHERE a.status = 'Done'
       
       ORDER BY date DESC
-      LIMIT 100
+      LIMIT 200
     `);
     res.json({ history: result.rows });
   } catch (err) {
