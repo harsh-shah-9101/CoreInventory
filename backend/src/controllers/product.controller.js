@@ -76,10 +76,12 @@ exports.updateProduct = async (req, res) => {
 exports.getStockByLocation = async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT p.name AS product, w.name AS warehouse, w.location, p.qty_on_hand AS available
+      SELECT p.name AS product, w.name AS warehouse, w.location, 
+             COALESCE(ps.qty, 0) AS on_hand, 0 AS reserved, COALESCE(ps.qty, 0) AS available
       FROM products p
-      LEFT JOIN warehouses w ON w.id = p.warehouse_id
-      ORDER BY p.name ASC
+      CROSS JOIN warehouses w
+      LEFT JOIN product_stock ps ON ps.product_id = p.id AND ps.warehouse_id = w.id
+      ORDER BY p.name ASC, w.name ASC
     `);
     res.json({ stock: result.rows });
   } catch (err) {
