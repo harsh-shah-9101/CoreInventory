@@ -18,7 +18,8 @@ CREATE TABLE IF NOT EXISTS otp_tokens (
 -- Product Categories
 CREATE TABLE IF NOT EXISTS categories (
   id SERIAL PRIMARY KEY,
-  name VARCHAR(255) NOT NULL UNIQUE
+  name VARCHAR(255) NOT NULL UNIQUE,
+  description TEXT
 );
 
 -- Warehouses / Locations
@@ -37,7 +38,27 @@ CREATE TABLE IF NOT EXISTS products (
   qty_on_hand INTEGER DEFAULT 0,
   reorder_level INTEGER DEFAULT 10,
   warehouse_id INTEGER REFERENCES warehouses(id),
+  price DECIMAL(10,2) DEFAULT 0.00,
   created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Product Stock per Location
+CREATE TABLE IF NOT EXISTS product_stock (
+  id SERIAL PRIMARY KEY,
+  product_id INTEGER REFERENCES products(id),
+  warehouse_id INTEGER REFERENCES warehouses(id),
+  qty INTEGER DEFAULT 0,
+  UNIQUE(product_id, warehouse_id)
+);
+
+-- Reordering Rules
+CREATE TABLE IF NOT EXISTS reorder_rules (
+  id SERIAL PRIMARY KEY,
+  product_id INTEGER REFERENCES products(id) ON DELETE CASCADE,
+  min_qty INTEGER DEFAULT 0,
+  max_qty INTEGER DEFAULT 0,
+  reorder_qty INTEGER DEFAULT 0,
+  UNIQUE(product_id)
 );
 
 -- Receipts (Incoming Shipments)

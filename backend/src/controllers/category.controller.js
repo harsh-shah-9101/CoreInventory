@@ -22,12 +22,29 @@ exports.createCategory = async (req, res) => {
   const { name, description } = req.body;
   try {
     const result = await pool.query(
-      'INSERT INTO categories (name) VALUES ($1) RETURNING *',
-      [name]
+      'INSERT INTO categories (name, description) VALUES ($1, $2) RETURNING *',
+      [name, description]
     );
     res.status(21).json({ category: result.rows[0] });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to create category' });
+  }
+};
+
+// PUT /api/categories/:id
+exports.updateCategory = async (req, res) => {
+  const { id } = req.params;
+  const { name, description } = req.body;
+  try {
+    const result = await pool.query(
+      'UPDATE categories SET name = $1, description = $2 WHERE id = $3 RETURNING *',
+      [name, description, id]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'Category not found' });
+    res.json({ category: result.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update category' });
   }
 };

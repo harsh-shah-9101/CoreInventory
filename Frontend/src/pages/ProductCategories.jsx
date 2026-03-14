@@ -6,7 +6,7 @@ const ProductCategories = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ name: '', description: '' });
+  const [form, setForm] = useState({ id: null, name: '', description: '' });
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState('');
 
@@ -24,12 +24,17 @@ const ProductCategories = () => {
   const handleSubmit = async (e) => {
     e.preventDefault(); setSaving(true); setError(''); setSuccess('');
     try {
-      await api.post('/categories', form);
-      setSuccess('Category created!');
+      if (form.id) {
+        await api.put(`/categories/${form.id}`, form);
+        setSuccess('Category updated!');
+      } else {
+        await api.post('/categories', form);
+        setSuccess('Category created!');
+      }
       setShowForm(false);
-      setForm({ name: '', description: '' });
+      setForm({ id: null, name: '', description: '' });
       fetchCategories();
-    } catch { setError('Failed to create category.'); }
+    } catch { setError('Failed to save category.'); }
     finally { setSaving(false); }
   };
 
@@ -55,12 +60,12 @@ const ProductCategories = () => {
 
       {showForm && (
         <div className="bg-[#1e1e2e] rounded-xl p-5 mb-6 border border-[#2a2a3e]">
-          <h2 className="font-semibold mb-4 text-[#c0c0d8]">New Category</h2>
+          <h2 className="font-semibold mb-4 text-[#c0c0d8]">{form.id ? 'Edit Category' : 'New Category'}</h2>
           <form onSubmit={handleSubmit} className="flex flex-col gap-3">
             <input className={inputClass} placeholder="Category Name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required />
             <input className={inputClass} placeholder="Description (optional)" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
             <button type="submit" disabled={saving} className="self-start px-4 py-2 bg-[#6c63ff] hover:bg-[#5a52e0] text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50">
-              {saving ? 'Saving…' : 'Create Category'}
+              {saving ? 'Saving…' : (form.id ? 'Update Category' : 'Create Category')}
             </button>
           </form>
         </div>
@@ -78,10 +83,22 @@ const ProductCategories = () => {
             <p className="text-[#a0a0b8]">No categories yet. Create your first one!</p>
           </div>
         ) : categories.map((cat, i) => (
-          <div key={cat.id || i} className="bg-[#1e1e2e] rounded-xl p-4 border border-[#2a2a3e] hover:border-[#6c63ff]/40 transition-colors">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-xl">🏷️</span>
-              <h3 className="font-semibold text-[#e2e2f0]">{cat.name}</h3>
+          <div key={cat.id || i} className="bg-[#1e1e2e] rounded-xl p-4 border border-[#2a2a3e] hover:border-[#6c63ff]/40 transition-colors relative group">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🏷️</span>
+                <h3 className="font-semibold text-[#e2e2f0]">{cat.name}</h3>
+              </div>
+              <button
+                onClick={() => {
+                  setForm({ id: cat.id, name: cat.name, description: cat.description || '' });
+                  setShowForm(true);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className="opacity-0 group-hover:opacity-100 px-2 py-1 text-xs bg-[#2a2a3e] hover:bg-[#3a3a55] text-[#a0a0b8] rounded transition-all"
+              >
+                Edit
+              </button>
             </div>
             {cat.description && <p className="text-[#a0a0b8] text-xs">{cat.description}</p>}
             <p className="text-[#6b6b8a] text-xs mt-2">{cat.product_count ?? 0} products</p>
