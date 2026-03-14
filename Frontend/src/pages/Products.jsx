@@ -7,7 +7,7 @@ const Products = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ id: null, name: '', sku: '', category: '', qty: 0, price: 0 });
+  const [form, setForm] = useState({ id: null, name: '', sku: '', category: '', qty: 0, price: 0, unit_of_measure: 'Units' });
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState('');
 
@@ -38,7 +38,7 @@ const Products = () => {
         setSuccess('Product created successfully!');
       }
       setShowForm(false);
-      setForm({ id: null, name: '', sku: '', category: '', qty: 0, price: 0 });
+      setForm({ id: null, name: '', sku: '', category: '', qty: 0, price: 0, unit_of_measure: 'Units' });
       fetchProductsAndCategories();
     } catch { setError('Failed to save product.'); }
     finally { setSaving(false); }
@@ -78,6 +78,7 @@ const Products = () => {
               {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
             </select>
             <input className={inputClass} placeholder="Quantity" type="number" value={form.qty} onChange={e => setForm(f => ({ ...f, qty: +e.target.value }))} min="0" />
+            <input className={inputClass} placeholder="Unit of Measure (e.g. kg, pieces, mg)" value={form.unit_of_measure} onChange={e => setForm(f => ({ ...f, unit_of_measure: e.target.value }))} required />
             <input className={inputClass} placeholder="Price" type="number" value={form.price} onChange={e => setForm(f => ({ ...f, price: +e.target.value }))} min="0" step="0.01" />
             <button type="submit" disabled={saving} className="px-4 py-2 bg-[#6c63ff] hover:bg-[#5a52e0] text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50">
               {saving ? 'Saving…' : (form.id ? 'Update Product' : 'Create Product')}
@@ -104,6 +105,7 @@ const Products = () => {
                 <th className="px-5 py-4 text-left">SKU</th>
                 <th className="px-5 py-4 text-left">Category</th>
                 <th className="px-5 py-4 text-right">Qty</th>
+                <th className="px-5 py-4 text-left">UOM</th>
                 <th className="px-5 py-4 text-right">Price</th>
                 <th className="px-5 py-4 text-right">Actions</th>
               </tr></thead>
@@ -114,11 +116,12 @@ const Products = () => {
                     <td className="px-5 py-3 font-mono text-[#a89eff] text-xs">{p.sku || '—'}</td>
                     <td className="px-5 py-3 text-[#a0a0b8]">{p.category || '—'}</td>
                     <td className="px-5 py-3 text-right text-[#e2e2f0] font-semibold">{p.qty ?? p.qty_on_hand ?? p.quantity ?? '—'}</td>
+                    <td className="px-5 py-3 text-left text-[#a0a0b8] text-xs">{p.unit_of_measure || 'Units'}</td>
                     <td className="px-5 py-3 text-right text-[#a0a0b8]">{p.price != null ? `$${(+p.price).toFixed(2)}` : '—'}</td>
                     <td className="px-5 py-3 text-right">
                       <button
                         onClick={() => {
-                          setForm({ id: p.id, name: p.name, sku: p.sku, category: p.category || '', qty: p.qty_on_hand ?? 0, price: p.price ?? 0 });
+                          setForm({ id: p.id, name: p.name, sku: p.sku, category: p.category || '', qty: p.qty_on_hand ?? 0, price: p.price ?? 0, unit_of_measure: p.unit_of_measure || 'Units' });
                           setShowForm(true);
                           window.scrollTo({ top: 0, behavior: 'smooth' });
                         }}
