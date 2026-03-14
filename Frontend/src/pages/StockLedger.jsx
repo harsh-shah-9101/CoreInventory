@@ -1,91 +1,110 @@
 import React, { useState, useEffect } from 'react';
+import Sidebar from '../components/Sidebar';
 import api from '../services/api';
+import { BookOpen } from 'lucide-react';
+
+const MOVE_COLOR = (type, qty) => {
+  if (type === 'RECEIPT' || type === 'TRANSFER_IN') return { color: '#15803D' };
+  if (type === 'DELIVERY' || type === 'TRANSFER_OUT') return { color: '#B91C1C' };
+  return qty > 0 ? { color: '#15803D' } : { color: '#B91C1C' };
+};
+
+const MOVE_BADGE = {
+  RECEIPT:      { background: '#F0FDF4', color: '#15803D' },
+  DELIVERY:     { background: '#FFF7ED', color: '#C2410C' },
+  TRANSFER_IN:  { background: '#EFF6FF', color: '#1D4ED8' },
+  TRANSFER_OUT: { background: '#EFF6FF', color: '#1D4ED8' },
+  ADJUSTMENT:   { background: '#F5F3FF', color: '#6D28D9' },
+};
 
 const StockLedger = () => {
   const [ledger, setLedger] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError]     = useState('');
 
   const fetchLedger = async () => {
     setLoading(true); setError('');
     try {
       const res = await api.get('/ledger');
       setLedger(res.data?.ledger || []);
-    } catch { 
-      setError('Failed to load stock ledger.'); 
-    }
+    } catch { setError('Failed to load stock ledger.'); }
     finally { setLoading(false); }
   };
 
   useEffect(() => { fetchLedger(); }, []);
 
-  const getMovementColor = (type, qty) => {
-    if (type === 'RECEIPT' || type === 'TRANSFER_IN') return 'text-green-400';
-    if (type === 'DELIVERY' || type === 'TRANSFER_OUT') return 'text-red-400';
-    return qty > 0 ? 'text-green-400' : 'text-red-400'; // Adjustments
-  };
-
   return (
-    <div className="p-6 text-[#e2e2f0]">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white">Stock Ledger</h1>
-        <p className="text-[#a0a0b8] text-sm mt-1">Immutable audit log of all inventory movements</p>
-      </div>
+    <div style={{ display: 'flex', flex: 1, minHeight: '100dvh' }}>
+      <Sidebar />
+      <main style={{ flex: 1, padding: '28px 32px', overflowY: 'auto', background: '#FAFAFA' }}>
 
-      {error && <div className="mb-4 p-3 bg-red-900/40 border border-red-700 text-red-300 rounded-lg text-sm">{error}</div>}
-
-      <div className="bg-[#1e1e2e] rounded-xl overflow-hidden border border-[#2a2a3e]">
-        <div className="px-5 py-4 border-b border-[#2a2a3e] flex items-center justify-between">
-          <h2 className="font-semibold text-[#c0c0d8]">Movement History</h2>
-          <span className="text-xs text-[#6b6b8a]">{ledger.length} records</span>
+        <div className="page-header">
+          <div>
+            <h1 className="page-title">Stock Ledger</h1>
+            <p className="page-subtitle">Immutable audit log of all inventory movements</p>
+          </div>
+          <span style={{ fontSize: '0.72rem', color: '#A1A1AA', background: '#F4F4F5', padding: '4px 10px', borderRadius: '4px', border: '1px solid #E4E4E7' }}>
+            Read-only
+          </span>
         </div>
-        {loading ? (
-          <div className="p-10 text-center flex flex-col items-center">
-             <div className="w-8 h-8 border-4 border-[#6c63ff] border-t-transparent rounded-full animate-spin mb-3" />
-             <p className="text-[#a0a0b8] text-sm">Loading audit trail…</p>
+
+        {error && <div className="alert-error">{error}</div>}
+
+        <div className="card">
+          <div style={{ padding: '14px 20px', borderBottom: '1px solid #E4E4E7', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <h2 style={{ fontSize: '0.9rem', fontWeight: 600 }}>Movement History</h2>
+            <span style={{ fontSize: '0.75rem', color: '#A1A1AA' }}>{ledger.length} records</span>
           </div>
-        ) : ledger.length === 0 ? (
-          <div className="p-10 text-center"><p className="text-4xl mb-2">📖</p><p className="text-[#a0a0b8]">No stock movements recorded yet.</p></div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead><tr className="bg-[#16162a] text-[#a0a0b8] text-xs uppercase">
-                <th className="px-5 py-4 text-left">Date</th>
-                <th className="px-5 py-4 text-left">Product</th>
-                <th className="px-5 py-4 text-left">Warehouse</th>
-                <th className="px-5 py-4 text-left">Movement Type</th>
-                <th className="px-5 py-4 text-right">Quantity Change</th>
-                <th className="px-5 py-4 text-left">Source Document</th>
-              </tr></thead>
-              <tbody className="divide-y divide-[#2a2a3e]">
-                {ledger.map((entry, i) => (
-                  <tr key={entry.id || i} className="hover:bg-[#252538] transition-colors">
-                    <td className="px-5 py-3 text-[#a0a0b8] whitespace-nowrap">
-                      {new Date(entry.created_at).toLocaleString()}
-                    </td>
-                    <td className="px-5 py-3 font-medium text-[#e2e2f0]">{entry.product_name}</td>
-                    <td className="px-5 py-3 text-[#a0a0b8]">{entry.warehouse_name}</td>
-                    <td className="px-5 py-3">
-                       <span className="px-2 py-1 bg-[#2a2a3e] border border-[#3a3a55] text-[#c0c0d8] rounded text-xs font-mono">
-                         {entry.movement_type}
-                       </span>
-                    </td>
-                    <td className={`px-5 py-3 text-right font-semibold whitespace-nowrap ${getMovementColor(entry.movement_type, entry.quantity)}`}>
-                      {entry.quantity > 0 ? `+${entry.quantity}` : entry.quantity}
-                    </td>
-                    <td className="px-5 py-3">
-                      <div className="flex flex-col">
-                        <span className="text-xs text-[#6b6b8a] uppercase">{entry.reference_type}</span>
-                        <span className="font-mono text-[#a89eff] text-sm">{entry.reference_id}</span>
-                      </div>
-                    </td>
+          {loading ? (
+            <div className="loading-state"><div className="spinner" /><p>Loading audit trail…</p></div>
+          ) : ledger.length === 0 ? (
+            <div className="empty-state"><BookOpen size={32} strokeWidth={1} /><p>No stock movements recorded yet.</p></div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Product</th>
+                    <th>Warehouse</th>
+                    <th>Movement Type</th>
+                    <th className="text-right">Qty Change</th>
+                    <th>Source Document</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+                </thead>
+                <tbody>
+                  {ledger.map((entry, i) => {
+                    const moveStyle = MOVE_BADGE[entry.movement_type] || { background: '#F4F4F5', color: '#52525B' };
+                    const qtyStyle = MOVE_COLOR(entry.movement_type, entry.quantity);
+                    const isPos = entry.quantity > 0;
+                    return (
+                      <tr key={entry.id || i}>
+                        <td className="muted" style={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+                          {new Date(entry.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </td>
+                        <td style={{ fontWeight: 500 }}>{entry.product_name}</td>
+                        <td className="muted">{entry.warehouse_name}</td>
+                        <td>
+                          <span style={{ display: 'inline-flex', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 600, fontFamily: 'var(--font-mono)', ...moveStyle }}>
+                            {entry.movement_type}
+                          </span>
+                        </td>
+                        <td className="text-right" style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, ...qtyStyle }}>
+                          {isPos ? `+${entry.quantity}` : entry.quantity}
+                        </td>
+                        <td>
+                          <p style={{ fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#A1A1AA', marginBottom: '1px' }}>{entry.reference_type}</p>
+                          <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: '#7C3AED' }}>{entry.reference_id}</p>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </main>
     </div>
   );
 };

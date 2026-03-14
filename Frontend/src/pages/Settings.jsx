@@ -1,22 +1,21 @@
 import React, { useState, useEffect } from 'react';
+import Sidebar from '../components/Sidebar';
 import api from '../services/api';
+import { Warehouse, MapPin, Plus, X, Pencil, Palette, Globe } from 'lucide-react';
 
 const Settings = () => {
   const [warehouses, setWarehouses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
-  // Locations State
   const [locations, setLocations] = useState([]);
   const [loadingLocations, setLoadingLocations] = useState(true);
   const [locError, setLocError] = useState('');
 
-  // Add Warehouse Form State
   const [showAddForm, setShowAddForm] = useState(false);
   const [formData, setFormData] = useState({ name: '', code: '', address: '' });
   const [submitting, setSubmitting] = useState(false);
 
-  // Add Location Form State
   const [showAddLocForm, setShowAddLocForm] = useState(false);
   const [locFormData, setLocFormData] = useState({ name: '', code: '', warehouse_id: '' });
   const [submittingLoc, setSubmittingLoc] = useState(false);
@@ -80,177 +79,196 @@ const Settings = () => {
     }
   };
 
-  const inputClass = "bg-transparent border-b border-[#a0a0b8] text-[#e2e2f0] px-2 py-1 focus:outline-none focus:border-[#ff8fab] transition-colors w-full";
-  const labelClass = "text-[#ff8fab] font-script tracking-wide text-lg w-32 shrink-0"; // "font-script" simulates the handwritten style requested if custom font is added
-
-  // Same styling for Location to match Warehouse UI perfectly
-  const inputClassLoc = "bg-transparent border-b border-[#a0a0b8] text-[#e2e2f0] px-2 py-1 focus:outline-none focus:border-[#4cc9f0] transition-colors w-full";
-  const labelClassLoc = "text-[#4cc9f0] font-script tracking-wide text-lg w-32 shrink-0 capitalize";
-
   return (
-    <div className="p-6 text-[#e2e2f0] max-w-6xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white">Settings</h1>
-        <p className="text-[#a0a0b8] text-sm mt-1">Manage warehouses, locations, and system configuration</p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <div style={{ display: 'flex', flex: 1, minHeight: '100dvh' }}>
+      <Sidebar />
+      <main style={{ flex: 1, padding: '28px 32px', overflowY: 'auto', background: '#FAFAFA' }}>
         
-        {/* WAREHOUSE SECTION */}
-        <div className="bg-[#1e1e2e] rounded-xl border border-[#2a2a3e] p-6 h-fit">
-          <h2 className="text-lg font-semibold text-[#ff8fab] mb-4 flex items-center gap-2 border-b border-[#3a3a55] pb-2 font-script tracking-wider">
-            Warehouse
-          </h2>
-          
-          {error && <div className="mb-4 p-3 bg-red-900/40 border border-red-700 text-red-300 rounded-lg text-sm">{error}</div>}
-
-          {loading && warehouses.length === 0 ? (
-            <div className="py-10 flex justify-center"><div className="w-6 h-6 border-4 border-[#ff8fab] border-t-transparent rounded-full animate-spin" /></div>
-          ) : warehouses.length === 0 && !showAddForm ? (
-            <p className="text-[#a0a0b8] text-sm py-4">No warehouses configured.</p>
-          ) : (
-            <div className="flex flex-col gap-3 mb-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-              {warehouses.map((w, i) => (
-                <div key={w.id || i} className="p-4 bg-[#16162a] rounded-lg border border-[#2a2a3e] flex items-center justify-between">
-                  <div>
-                    <h3 className="font-medium text-[#e2e2f0]">{w.name}</h3>
-                    <p className="text-[#6b6b8a] text-xs">{w.code} • {w.address || 'No address'}</p>
-                  </div>
-                  <button className="text-[#ff8fab] hover:text-[#ffb3c6] text-xs font-medium">Edit</button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {showAddForm && (
-            <form onSubmit={handleAddSubmit} className="bg-[#16162a] p-5 rounded-lg border border-[#2a2a3e] mt-2 animate-fade-in">
-              <div className="flex flex-col gap-5">
-                <div className="flex items-center">
-                  <label className={labelClass}>Name:</label>
-                  <div className="flex-1 max-w-[250px]"><input type="text" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className={inputClass} /></div>
-                </div>
-                <div className="flex items-center">
-                  <label className={labelClass}>Short Code:</label>
-                  <div className="flex-1 max-w-[150px]"><input type="text" required value={formData.code} onChange={e => setFormData({...formData, code: e.target.value})} className={inputClass} /></div>
-                </div>
-                <div className="flex items-center">
-                  <label className={labelClass}>Address:</label>
-                  <div className="flex-1 max-w-[350px]"><input type="text" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} className={inputClass} /></div>
-                </div>
-              </div>
-              <div className="mt-6 flex gap-3">
-                <button disabled={submitting} type="submit" className="px-4 py-1.5 bg-[#ff8fab] hover:bg-[#ffb3c6] text-[#13131f] rounded text-sm font-semibold transition-colors">
-                  {submitting ? 'Saving...' : 'Save'}
-                </button>
-                <button type="button" onClick={() => setShowAddForm(false)} className="px-4 py-1.5 border border-[#3a3a55] hover:bg-[#2a2a3e] text-[#a0a0b8] rounded text-sm transition-colors">
-                  Cancel
-                </button>
-              </div>
-            </form>
-          )}
-
-          {!showAddForm && (
-            <button onClick={() => setShowAddForm(true)} className="mt-3 text-[#ff8fab] hover:text-[#ffb3c6] text-sm font-medium transition-colors">
-              ＋ Add Warehouse
-            </button>
-          )}
+        <div className="page-header">
+          <div>
+            <h1 className="page-title">Settings</h1>
+            <p className="page-subtitle">Manage warehouses, locations, and system configuration</p>
+          </div>
         </div>
 
-        {/* LOCATIONS SECTION */}
-        <div className="bg-[#1e1e2e] rounded-xl border border-[#2a2a3e] p-6 h-fit">
-          <h2 className="text-lg font-semibold text-[#4cc9f0] mb-4 flex items-center gap-2 border-b border-[#3a3a55] pb-2 font-script tracking-wider">
-            Location
-          </h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px', marginBottom: '24px' }}>
           
-          {locError && <div className="mb-4 p-3 bg-red-900/40 border border-red-700 text-red-300 rounded-lg text-sm">{locError}</div>}
-
-          {loadingLocations && locations.length === 0 ? (
-            <div className="py-10 flex justify-center"><div className="w-6 h-6 border-4 border-[#4cc9f0] border-t-transparent rounded-full animate-spin" /></div>
-          ) : locations.length === 0 && !showAddLocForm ? (
-            <p className="text-[#a0a0b8] text-sm py-4">No locations configured.</p>
-          ) : (
-            <div className="flex flex-col gap-3 mb-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-              {locations.map((loc, i) => (
-                <div key={loc.id || i} className="p-4 bg-[#16162a] rounded-lg border border-[#2a2a3e] flex items-center justify-between">
-                  <div>
-                    <h3 className="font-medium text-[#e2e2f0]">{loc.name}</h3>
-                    <p className="text-[#6b6b8a] text-xs">{loc.code} • In: {loc.warehouse_name || 'N/A'}</p>
-                  </div>
-                  <button className="text-[#4cc9f0] hover:text-[#72d4f2] text-xs font-medium">Edit</button>
+          {/* WAREHOUSE SECTION */}
+          <div className="card" style={{ padding: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '36px', height: '36px', background: '#F5F3FF', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Warehouse size={20} color="#7C3AED" strokeWidth={1.5} />
                 </div>
-              ))}
+                <h2 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Warehouses</h2>
+              </div>
+              <button 
+                onClick={() => setShowAddForm(!showAddForm)}
+                className="btn-secondary btn-sm"
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                {showAddForm ? <X size={14} /> : <Plus size={14} />}
+                {showAddForm ? 'Cancel' : 'Add'}
+              </button>
             </div>
-          )}
+            
+            {error && <div className="alert-error" style={{ marginBottom: '16px' }}>{error}</div>}
 
-          {showAddLocForm && (
-            <form onSubmit={handleAddLocSubmit} className="bg-[#16162a] p-5 rounded-lg border border-[#2a2a3e] mt-4 animate-fade-in relative overflow-hidden">
-               {/* Decorative background dashed line referencing the diagram connecting lines */}
-               <div className="absolute right-[-10px] top-[10px] w-[1px] h-[150px] border-l-2 border-dashed border-[#3a3a55] -rotate-[30deg] opacity-50 z-0 pointer-events-none"></div>
+            {showAddForm && (
+              <form onSubmit={handleAddSubmit} style={{ background: '#FAFAFA', padding: '16px', borderRadius: '10px', marginBottom: '20px', border: '1px solid #E4E4E7' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div>
+                    <label className="form-label">Warehouse Name</label>
+                    <input type="text" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g. Main Hub" />
+                  </div>
+                  <div>
+                    <label className="form-label">Short Code</label>
+                    <input type="text" required value={formData.code} onChange={e => setFormData({...formData, code: e.target.value})} placeholder="e.g. WH01" />
+                  </div>
+                  <div>
+                    <label className="form-label">Address</label>
+                    <input type="text" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} placeholder="Full address..." />
+                  </div>
+                </div>
+                <div style={{ marginTop: '16px', display: 'flex', gap: '8px' }}>
+                  <button disabled={submitting} type="submit" className="btn-primary btn-sm">
+                    {submitting ? 'Saving...' : 'Save Warehouse'}
+                  </button>
+                </div>
+              </form>
+            )}
 
-              <div className="flex flex-col gap-5 relative z-10">
-                <div className="flex items-center">
-                  <label className={labelClassLoc}>Name:</label>
-                  <div className="flex-1 max-w-[250px]"><input type="text" required value={locFormData.name} onChange={e => setLocFormData({...locFormData, name: e.target.value})} className={inputClassLoc} /></div>
+            {loading && warehouses.length === 0 ? (
+              <div className="loading-state" style={{ minHeight: '100px' }}><div className="spinner" /></div>
+            ) : warehouses.length === 0 ? (
+              <div className="empty-state" style={{ minHeight: '150px' }}><Warehouse size={32} strokeWidth={1} /><p>No warehouses configured.</p></div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {warehouses.map((w, i) => (
+                  <div key={w.id || i} style={{ padding: '14px', background: '#FAFAFA', borderRadius: '10px', border: '1px solid #F1F1F4', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <h3 style={{ fontSize: '0.9rem', fontWeight: 600, color: '#09090B' }}>{w.name}</h3>
+                      <p style={{ fontSize: '0.75rem', color: '#71717A', marginTop: '2px' }}>
+                        <span style={{ fontFamily: 'var(--font-mono)', color: '#7C3AED', fontWeight: 600 }}>{w.code}</span>
+                        {w.address && <> • {w.address}</>}
+                      </p>
+                    </div>
+                    <button style={{ color: '#71717A', background: 'none', border: 'none', cursor: 'pointer' }}><Pencil size={14} /></button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* LOCATIONS SECTION */}
+          <div className="card" style={{ padding: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '36px', height: '36px', background: '#ECFDF5', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <MapPin size={20} color="#059669" strokeWidth={1.5} />
                 </div>
-                <div className="flex items-center">
-                  <label className={labelClassLoc}>Short Code:</label>
-                  <div className="flex-1 max-w-[150px]"><input type="text" required value={locFormData.code} onChange={e => setLocFormData({...locFormData, code: e.target.value})} className={inputClassLoc} /></div>
-                </div>
-                <div className="flex items-center">
-                  <label className={labelClassLoc}>Warehouse:</label>
-                  <div className="flex-1 max-w-[250px]">
+                <h2 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Locations</h2>
+              </div>
+              <button 
+                onClick={() => setShowAddLocForm(!showAddLocForm)}
+                className="btn-secondary btn-sm"
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                {showAddLocForm ? <X size={14} /> : <Plus size={14} />}
+                {showAddLocForm ? 'Cancel' : 'Add'}
+              </button>
+            </div>
+            
+            {locError && <div className="alert-error" style={{ marginBottom: '16px' }}>{locError}</div>}
+
+            {showAddLocForm && (
+              <form onSubmit={handleAddLocSubmit} style={{ background: '#FAFAFA', padding: '16px', borderRadius: '10px', marginBottom: '20px', border: '1px solid #E4E4E7' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div>
+                    <label className="form-label">Location Name</label>
+                    <input type="text" required value={locFormData.name} onChange={e => setLocFormData({...locFormData, name: e.target.value})} placeholder="e.g. Shelf A-101" />
+                  </div>
+                  <div>
+                    <label className="form-label">Short Code</label>
+                    <input type="text" required value={locFormData.code} onChange={e => setLocFormData({...locFormData, code: e.target.value})} placeholder="e.g. SA101" />
+                  </div>
+                  <div>
+                    <label className="form-label">Warehouse</label>
                     <select 
                       required
                       value={locFormData.warehouse_id} 
                       onChange={e => setLocFormData({...locFormData, warehouse_id: e.target.value})} 
-                      className="bg-[#1e1e2e] border-b border-[#a0a0b8] text-[#e2e2f0] px-2 py-1 focus:outline-none focus:border-[#4cc9f0] transition-colors w-full cursor-pointer"
                     >
-                      <option value="" disabled>Select WH</option>
+                      <option value="" disabled>Select Warehouse</option>
                       {warehouses.map(w => (
                         <option key={w.id} value={w.id}>{w.name} ({w.code})</option>
                       ))}
                     </select>
                   </div>
                 </div>
-                
-                <p className="text-[#a0a0b8] text-xs italic text-center mt-2" style={{fontFamily: 'cursive'}}>
-                  This holds the multiple locations of warehouse, rooms etc..
-                </p>
+                <div style={{ marginTop: '16px', display: 'flex', gap: '8px' }}>
+                  <button disabled={submittingLoc} type="submit" className="btn-primary btn-sm">
+                    {submittingLoc ? 'Saving...' : 'Save Location'}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {loadingLocations && locations.length === 0 ? (
+              <div className="loading-state" style={{ minHeight: '100px' }}><div className="spinner" /></div>
+            ) : locations.length === 0 ? (
+              <div className="empty-state" style={{ minHeight: '150px' }}><MapPin size={32} strokeWidth={1} /><p>No locations configured.</p></div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {locations.map((loc, i) => (
+                  <div key={loc.id || i} style={{ padding: '14px', background: '#FAFAFA', borderRadius: '10px', border: '1px solid #F1F1F4', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <h3 style={{ fontSize: '0.9rem', fontWeight: 600, color: '#09090B' }}>{loc.name}</h3>
+                      <p style={{ fontSize: '0.75rem', color: '#71717A', marginTop: '2px' }}>
+                        <span style={{ fontFamily: 'var(--font-mono)', color: '#059669', fontWeight: 600 }}>{loc.code}</span>
+                        <span style={{ margin: '0 6px', color: '#D4D4D8' }}>•</span>
+                        {loc.warehouse_name || 'N/A'}
+                      </p>
+                    </div>
+                    <button style={{ color: '#71717A', background: 'none', border: 'none', cursor: 'pointer' }}><Pencil size={14} /></button>
+                  </div>
+                ))}
               </div>
-
-              <div className="mt-6 flex gap-3 relative z-10">
-                <button disabled={submittingLoc} type="submit" className="px-4 py-1.5 bg-[#4cc9f0] hover:bg-[#72d4f2] text-[#13131f] rounded text-sm font-semibold transition-colors">
-                  {submittingLoc ? 'Saving...' : 'Save'}
-                </button>
-                <button type="button" onClick={() => setShowAddLocForm(false)} className="px-4 py-1.5 border border-[#3a3a55] hover:bg-[#2a2a3e] text-[#a0a0b8] rounded text-sm transition-colors">
-                  Cancel
-                </button>
-              </div>
-            </form>
-          )}
-
-          {!showAddLocForm && (
-            <button onClick={() => setShowAddLocForm(true)} className="mt-3 text-[#4cc9f0] hover:text-[#72d4f2] text-sm font-medium transition-colors">
-              ＋ Add Location
-            </button>
-          )}
-        </div>
-
-      </div>
-
-      {/* Theme Settings at bottom */}
-      <div className="bg-[#1e1e2e] rounded-xl border border-[#2a2a3e] p-6 max-w-2xl">
-        <h2 className="text-lg font-semibold text-white mb-4">Appearance & Theme</h2>
-        <div className="flex items-center justify-between p-4 bg-[#16162a] rounded-lg border border-[#2a2a3e]">
-          <div>
-            <p className="text-[#e2e2f0] text-sm font-medium">Dark Mode</p>
-            <p className="text-[#6b6b8a] text-xs">Always enabled for eye comfort</p>
-          </div>
-          <div className="w-10 h-5 bg-[#6c63ff] rounded-full relative">
-            <div className="absolute right-1 top-1 w-3 h-3 bg-white rounded-full" />
+            )}
           </div>
         </div>
-      </div>
+
+        {/* APPEARANCE SECTION */}
+        <div className="card" style={{ padding: '24px', maxWidth: '600px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+            <div style={{ width: '36px', height: '36px', background: '#F8FAFC', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Palette size={20} color="#64748B" strokeWidth={1.5} />
+            </div>
+            <h2 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Appearance</h2>
+          </div>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: '#FAFAFA', borderRadius: '10px', border: '1px solid #F1F1F4' }}>
+              <div>
+                <p style={{ fontSize: '0.9rem', fontWeight: 500, color: '#09090B' }}>Premium White Theme</p>
+                <p style={{ fontSize: '0.8rem', color: '#71717A', marginTop: '2px' }}>The system is currently using Arctic Professional theme.</p>
+              </div>
+              <div style={{ padding: '4px 12px', background: '#F0F9FF', color: '#0369A1', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 600 }}>Active</div>
+            </div>
+            
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: '#FAFAFA', borderRadius: '10px', border: '1px solid #F1F1F4' }}>
+              <div>
+                <p style={{ fontSize: '0.9rem', fontWeight: 500, color: '#09090B' }}>System Units</p>
+                <p style={{ fontSize: '0.8rem', color: '#71717A', marginTop: '2px' }}>Default measurement units for inventory.</p>
+              </div>
+              <select style={{ width: 'auto', minWidth: '100px', height: '32px', fontSize: '0.85rem' }}>
+                <option>Metric (kg, m)</option>
+                <option>Imperial (lb, ft)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </main>
     </div>
   );
 };

@@ -1,84 +1,87 @@
 import React from 'react';
+import { InboxIcon } from 'lucide-react';
 
-const STATUS_COLORS = {
-  Draft:     'bg-gray-700 text-gray-300',
-  Waiting:   'bg-yellow-900/60 text-yellow-300',
-  Ready:     'bg-blue-900/60 text-blue-300',
-  Done:      'bg-green-900/60 text-green-300',
-  Canceled:  'bg-red-900/60 text-red-300',
+const STATUS_STYLE = {
+  Done:     { background: '#F0FDF4', color: '#15803D' },
+  Ready:    { background: '#EFF6FF', color: '#1D4ED8' },
+  Waiting:  { background: '#FFFBEB', color: '#B45309' },
+  Draft:    { background: '#F4F4F5', color: '#52525B' },
+  Canceled: { background: '#FEF2F2', color: '#B91C1C' },
 };
 
-const TYPE_COLORS = {
-  Receipt:    'bg-purple-900/50 text-purple-300',
-  Delivery:   'bg-orange-900/50 text-orange-300',
-  Transfer:   'bg-cyan-900/50 text-cyan-300',
-  Adjustment: 'bg-pink-900/50 text-pink-300',
+const TYPE_STYLE = {
+  Receipt:    { background: '#F5F3FF', color: '#6D28D9' },
+  Delivery:   { background: '#FFF7ED', color: '#C2410C' },
+  Transfer:   { background: '#EFF6FF', color: '#1D4ED8' },
+  Adjustment: { background: '#F0FDF4', color: '#15803D' },
 };
 
-const OperationsTable = ({ operations, loading }) => {
+const Badge = ({ label, styleMap }) => {
+  const s = styleMap[label] || { background: '#F4F4F5', color: '#52525B' };
+  return (
+    <span style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      padding: '2px 8px',
+      borderRadius: '4px',
+      fontSize: '0.72rem',
+      fontWeight: 600,
+      letterSpacing: '0.01em',
+      whiteSpace: 'nowrap',
+      ...s,
+    }}>{label}</span>
+  );
+};
+
+const OperationsTable = ({ operations = [], loading }) => {
   if (loading) {
     return (
-      <div className="bg-[#1e1e2e] rounded-xl shadow p-10 text-center">
-        <div className="w-8 h-8 border-4 border-[#6c63ff] border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-        <p className="text-[#a0a0b8] text-sm">Loading operations...</p>
+      <div style={{ padding: '48px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+        <div className="spinner" />
+        <p style={{ fontSize: '0.85rem', color: '#A1A1AA' }}>Loading operations…</p>
       </div>
     );
   }
 
-  if (!operations || operations.length === 0) {
+  if (operations.length === 0) {
     return (
-      <div className="bg-[#1e1e2e] rounded-xl shadow p-10 text-center">
-        <p className="text-4xl mb-3">📭</p>
-        <p className="text-[#a0a0b8]">No operations found for the selected filters.</p>
+      <div style={{ padding: '48px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+        <InboxIcon size={32} color="#D4D4D8" strokeWidth={1} />
+        <p style={{ fontSize: '0.875rem', color: '#A1A1AA' }}>No operations found</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-[#1e1e2e] rounded-xl shadow overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-[#16162a] text-[#a0a0b8] text-xs uppercase tracking-wider">
-              <th className="px-5 py-4 text-left">Reference</th>
-              <th className="px-5 py-4 text-left">Type</th>
-              <th className="px-5 py-4 text-left">Product</th>
-              <th className="px-5 py-4 text-right">Qty</th>
-              <th className="px-5 py-4 text-left">Warehouse</th>
-              <th className="px-5 py-4 text-left">Status</th>
-              <th className="px-5 py-4 text-left">Date</th>
+    <div style={{ overflowX: 'auto' }}>
+      <table className="data-table">
+        <thead>
+          <tr>
+            <th>Reference</th>
+            <th>Type</th>
+            <th>Product</th>
+            <th className="text-right">Qty</th>
+            <th>Warehouse</th>
+            <th>Status</th>
+            <th>Scheduled</th>
+          </tr>
+        </thead>
+        <tbody>
+          {operations.map((op, idx) => (
+            <tr key={`${op.type}-${op.id}-${idx}`}>
+              <td className="mono" style={{ color: '#52525B' }}>{op.reference}</td>
+              <td><Badge label={op.type} styleMap={TYPE_STYLE} /></td>
+              <td style={{ fontWeight: 500 }}>{op.product}</td>
+              <td className="text-right" style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{op.qty}</td>
+              <td className="muted">{op.warehouse}</td>
+              <td><Badge label={op.status} styleMap={STATUS_STYLE} /></td>
+              <td className="muted" style={{ fontSize: '0.8rem' }}>
+                {op.scheduled_date ? new Date(op.scheduled_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+              </td>
             </tr>
-          </thead>
-          <tbody className="divide-y divide-[#2a2a3e]">
-            {operations.map((op, idx) => (
-              <tr
-                key={`${op.type}-${op.id}-${idx}`}
-                className="hover:bg-[#252538] transition-colors"
-              >
-                <td className="px-5 py-3 font-mono text-[#c0c0d8] font-medium">{op.reference}</td>
-                <td className="px-5 py-3">
-                  <span className={`px-2 py-1 rounded-md text-xs font-semibold ${TYPE_COLORS[op.type] || 'bg-gray-700 text-gray-300'}`}>
-                    {op.type}
-                  </span>
-                </td>
-                <td className="px-5 py-3 text-[#e2e2f0]">{op.product}</td>
-                <td className="px-5 py-3 text-right text-[#e2e2f0] font-semibold">
-                  {op.qty > 0 ? `+${op.qty}` : op.qty}
-                </td>
-                <td className="px-5 py-3 text-[#a0a0b8]">{op.warehouse}</td>
-                <td className="px-5 py-3">
-                  <span className={`px-2 py-1 rounded-md text-xs font-semibold ${STATUS_COLORS[op.status] || 'bg-gray-700 text-gray-300'}`}>
-                    {op.status}
-                  </span>
-                </td>
-                <td className="px-5 py-3 text-[#6b6b8a] text-xs">
-                  {op.scheduled_date ? new Date(op.scheduled_date).toLocaleDateString() : '—'}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 };

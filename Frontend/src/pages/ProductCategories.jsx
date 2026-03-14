@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
+import Sidebar from '../components/Sidebar';
 import api from '../services/api';
+import { Plus, X, Pencil, Tag } from 'lucide-react';
 
 const ProductCategories = () => {
   const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ id: null, name: '', description: '' });
-  const [saving, setSaving] = useState(false);
-  const [success, setSuccess] = useState('');
+  const [loading, setLoading]       = useState(true);
+  const [error, setError]           = useState('');
+  const [showForm, setShowForm]     = useState(false);
+  const [form, setForm]             = useState({ id: null, name: '', description: '' });
+  const [saving, setSaving]         = useState(false);
+  const [success, setSuccess]       = useState('');
 
   const fetchCategories = async () => {
     setLoading(true); setError('');
@@ -26,10 +28,10 @@ const ProductCategories = () => {
     try {
       if (form.id) {
         await api.put(`/categories/${form.id}`, form);
-        setSuccess('Category updated!');
+        setSuccess('Category updated.');
       } else {
         await api.post('/categories', form);
-        setSuccess('Category created!');
+        setSuccess('Category created.');
       }
       setShowForm(false);
       setForm({ id: null, name: '', description: '' });
@@ -38,73 +40,76 @@ const ProductCategories = () => {
     finally { setSaving(false); }
   };
 
-  const inputClass = 'w-full bg-[#2a2a3e] border border-[#3a3a55] text-[#e2e2f0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#6c63ff] transition-colors';
-
   return (
-    <div className="p-6 text-[#e2e2f0]">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Product Categories</h1>
-          <p className="text-[#a0a0b8] text-sm mt-1">Organize products into logical groups</p>
-        </div>
-        <button
-          onClick={() => setShowForm(f => !f)}
-          className="px-4 py-2 bg-[#6c63ff] hover:bg-[#5a52e0] text-white rounded-lg text-sm font-medium transition-colors"
-        >
-          {showForm ? '✕ Cancel' : '＋ New Category'}
-        </button>
-      </div>
+    <div style={{ display: 'flex', flex: 1, minHeight: '100dvh' }}>
+      <Sidebar />
+      <main style={{ flex: 1, padding: '28px 32px', overflowY: 'auto', background: '#FAFAFA' }}>
 
-      {error   && <div className="mb-4 p-3 bg-red-900/40 border border-red-700 text-red-300 rounded-lg text-sm">{error}</div>}
-      {success && <div className="mb-4 p-3 bg-green-900/40 border border-green-700 text-green-300 rounded-lg text-sm">{success}</div>}
-
-      {showForm && (
-        <div className="bg-[#1e1e2e] rounded-xl p-5 mb-6 border border-[#2a2a3e]">
-          <h2 className="font-semibold mb-4 text-[#c0c0d8]">{form.id ? 'Edit Category' : 'New Category'}</h2>
-          <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-            <input className={inputClass} placeholder="Category Name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required />
-            <input className={inputClass} placeholder="Description (optional)" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
-            <button type="submit" disabled={saving} className="self-start px-4 py-2 bg-[#6c63ff] hover:bg-[#5a52e0] text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50">
-              {saving ? 'Saving…' : (form.id ? 'Update Category' : 'Create Category')}
-            </button>
-          </form>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {loading ? (
-          <div className="col-span-3 p-10 text-center bg-[#1e1e2e] rounded-xl border border-[#2a2a3e]">
-            <div className="w-8 h-8 border-4 border-[#6c63ff] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-            <p className="text-[#a0a0b8] text-sm">Loading…</p>
+        <div className="page-header">
+          <div>
+            <h1 className="page-title">Product Categories</h1>
+            <p className="page-subtitle">Organize products into logical groups</p>
           </div>
-        ) : categories.length === 0 ? (
-          <div className="col-span-3 p-10 text-center bg-[#1e1e2e] rounded-xl border border-[#2a2a3e]">
-            <p className="text-4xl mb-2">🏷️</p>
-            <p className="text-[#a0a0b8]">No categories yet. Create your first one!</p>
-          </div>
-        ) : categories.map((cat, i) => (
-          <div key={cat.id || i} className="bg-[#1e1e2e] rounded-xl p-4 border border-[#2a2a3e] hover:border-[#6c63ff]/40 transition-colors relative group">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <span className="text-xl">🏷️</span>
-                <h3 className="font-semibold text-[#e2e2f0]">{cat.name}</h3>
+          <button
+            className="btn-primary btn-sm"
+            onClick={() => { setShowForm(f => !f); if (showForm) setForm({ id: null, name: '', description: '' }); }}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            {showForm ? <><X size={13} /> Cancel</> : <><Plus size={13} /> New Category</>}
+          </button>
+        </div>
+
+        {error   && <div className="alert-error">{error}</div>}
+        {success && <div className="alert-success">{success}</div>}
+
+        {showForm && (
+          <div className="card" style={{ marginBottom: '20px', padding: '20px' }}>
+            <h2 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '14px' }}>{form.id ? 'Edit Category' : 'New Category'}</h2>
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxWidth: '480px' }}>
+              <div><label className="form-label">Category Name</label><input placeholder="e.g. Electronics" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required /></div>
+              <div><label className="form-label">Description (optional)</label><input placeholder="Brief description…" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} /></div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button type="button" className="btn-secondary btn-sm" onClick={() => setShowForm(false)}>Cancel</button>
+                <button type="submit" className="btn-primary btn-sm" disabled={saving}>{saving ? 'Saving…' : (form.id ? 'Update' : 'Create')}</button>
               </div>
-              <button
-                onClick={() => {
-                  setForm({ id: cat.id, name: cat.name, description: cat.description || '' });
-                  setShowForm(true);
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
-                className="opacity-0 group-hover:opacity-100 px-2 py-1 text-xs bg-[#2a2a3e] hover:bg-[#3a3a55] text-[#a0a0b8] rounded transition-all"
-              >
-                Edit
-              </button>
-            </div>
-            {cat.description && <p className="text-[#a0a0b8] text-xs">{cat.description}</p>}
-            <p className="text-[#6b6b8a] text-xs mt-2">{cat.product_count ?? 0} products</p>
+            </form>
           </div>
-        ))}
-      </div>
+        )}
+
+        {loading ? (
+          <div className="loading-state"><div className="spinner" /><p>Loading categories…</p></div>
+        ) : categories.length === 0 ? (
+          <div className="empty-state"><Tag size={32} strokeWidth={1} /><p>No categories yet. Create your first one!</p></div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '12px' }}>
+            {categories.map((cat, i) => (
+              <div
+                key={cat.id || i}
+                className="card"
+                style={{ padding: '16px 20px', cursor: 'default' }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '28px', height: '28px', background: '#F5F3FF', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Tag size={14} color="#7C3AED" strokeWidth={1.5} />
+                    </div>
+                    <h3 style={{ fontSize: '0.9rem', fontWeight: 600, color: '#09090B' }}>{cat.name}</h3>
+                  </div>
+                  <button
+                    onClick={() => { setForm({ id: cat.id, name: cat.name, description: cat.description || '' }); setShowForm(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    className="btn-secondary btn-sm"
+                    style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '0 8px', height: '24px', fontSize: '0.72rem' }}
+                  >
+                    <Pencil size={10} strokeWidth={2} />Edit
+                  </button>
+                </div>
+                {cat.description && <p style={{ fontSize: '0.8rem', color: '#71717A', marginBottom: '8px' }}>{cat.description}</p>}
+                <p style={{ fontSize: '0.72rem', color: '#A1A1AA' }}>{cat.product_count ?? 0} products</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </main>
     </div>
   );
 };

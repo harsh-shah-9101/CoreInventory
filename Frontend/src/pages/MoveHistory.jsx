@@ -1,22 +1,25 @@
 import React, { useState, useEffect } from 'react';
+import Sidebar from '../components/Sidebar';
 import api from '../services/api';
+import { Plus, X, CheckCircle, InboxIcon } from 'lucide-react';
+
+const STATUS_STYLE = {
+  Done:     { background: '#F0FDF4', color: '#15803D' },
+  Ready:    { background: '#EFF6FF', color: '#1D4ED8' },
+  Waiting:  { background: '#FFFBEB', color: '#B45309' },
+  Draft:    { background: '#F4F4F5', color: '#52525B' },
+  Canceled: { background: '#FEF2F2', color: '#B91C1C' },
+};
 
 const MoveHistory = () => {
-  const [ops, setOps] = useState([]);
-  const [products, setProducts] = useState([]);
+  const [ops, setOps]             = useState([]);
+  const [products, setProducts]   = useState([]);
   const [warehouses, setWarehouses] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [showForm, setShowForm] = useState(false);
-  const [saving, setSaving] = useState(false);
-  
-  const [form, setForm] = useState({ 
-    productId: '', 
-    fromWarehouseId: '', 
-    toWarehouseId: '',
-    qty: '', 
-    scheduledDate: new Date().toISOString().split('T')[0] 
-  });
+  const [loading, setLoading]     = useState(true);
+  const [error, setError]         = useState('');
+  const [showForm, setShowForm]   = useState(false);
+  const [saving, setSaving]       = useState(false);
+  const [form, setForm]           = useState({ productId: '', fromWarehouseId: '', toWarehouseId: '', qty: '', scheduledDate: new Date().toISOString().split('T')[0] });
 
   const fetchData = async () => {
     setLoading(true); setError('');
@@ -29,17 +32,14 @@ const MoveHistory = () => {
       setOps(recRes.data?.transfers || []);
       setProducts(prodRes.data?.products || []);
       setWarehouses(warRes.data?.warehouses || []);
-    } catch { 
-      setError('Failed to load transfers.'); 
-    }
+    } catch { setError('Failed to load transfers.'); }
     finally { setLoading(false); }
   };
 
   useEffect(() => { fetchData(); }, []);
 
   const handleCreate = async (e) => {
-    e.preventDefault();
-    setSaving(true);
+    e.preventDefault(); setSaving(true);
     try {
       await api.post('/transfers', form);
       setShowForm(false);
@@ -47,9 +47,7 @@ const MoveHistory = () => {
       fetchData();
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to create transfer.');
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   };
 
   const handleValidate = async (id) => {
@@ -62,111 +60,114 @@ const MoveHistory = () => {
     }
   };
 
-  const inputClass = 'w-full bg-[#2a2a3e] border border-[#3a3a55] text-[#e2e2f0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#6c63ff] transition-colors';
-
   return (
-    <div className="p-6 text-[#e2e2f0]">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-           <h1 className="text-2xl font-bold text-white">Internal Transfers</h1>
-           <p className="text-[#a0a0b8] text-sm mt-1">Move stock between your warehouses and locations</p>
+    <div style={{ display: 'flex', flex: 1, minHeight: '100dvh' }}>
+      <Sidebar />
+      <main style={{ flex: 1, padding: '28px 32px', overflowY: 'auto', background: '#FAFAFA' }}>
+
+        <div className="page-header">
+          <div>
+            <h1 className="page-title">Internal Transfers</h1>
+            <p className="page-subtitle">Move stock between your warehouses and locations</p>
+          </div>
+          <button className="btn-primary btn-sm" onClick={() => setShowForm(f => !f)} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            {showForm ? <><X size={13} /> Cancel</> : <><Plus size={13} /> New Transfer</>}
+          </button>
         </div>
-        <button
-          onClick={() => setShowForm(f => !f)}
-          className="px-4 py-2 bg-[#6c63ff] hover:bg-[#5a52e0] text-white rounded-lg text-sm font-medium transition-colors"
-        >
-          {showForm ? '✕ Cancel' : '＋ New Transfer'}
-        </button>
-      </div>
 
-      {error && <div className="mb-4 p-3 bg-red-900/40 border border-red-700 text-red-300 rounded-lg text-sm">{error}</div>}
+        {error && <div className="alert-error">{error}</div>}
 
-       {/* Create Form */}
-      {showForm && (
-        <div className="bg-[#1e1e2e] rounded-xl p-5 mb-6 border border-[#2a2a3e]">
-          <h2 className="font-semibold mb-4 text-[#c0c0d8]">Draft Internal Transfer</h2>
-          <form onSubmit={handleCreate} className="grid grid-cols-2 gap-4">
-            
-            <select className={inputClass} value={form.productId} onChange={e => setForm(f => ({ ...f, productId: e.target.value }))} required>
-              <option value="">Select Product...</option>
-              {products.map(p => <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>)}
-            </select>
-            <div className="hidden"></div>
-
-             <select className={inputClass} value={form.fromWarehouseId} onChange={e => setForm(f => ({ ...f, fromWarehouseId: e.target.value }))} required>
-              <option value="">Source Warehouse...</option>
-              {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-            </select>
-
-             <select className={inputClass} value={form.toWarehouseId} onChange={e => setForm(f => ({ ...f, toWarehouseId: e.target.value }))} required>
-              <option value="">Destination Warehouse...</option>
-              {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-            </select>
-
-            <input className={inputClass} placeholder="Quantity" type="number" value={form.qty} onChange={e => setForm(f => ({ ...f, qty: +e.target.value }))} min="1" required />
-            <input className={inputClass} type="date" value={form.scheduledDate} onChange={e => setForm(f => ({ ...f, scheduledDate: e.target.value }))} required />
-            
-            <button type="submit" disabled={saving} className="px-4 py-2 col-span-2 bg-[#6c63ff] hover:bg-[#5a52e0] text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50">
-              {saving ? 'Creating…' : 'Create Draft Transfer'}
-            </button>
-          </form>
-        </div>
-      )}
-
-      <div className="bg-[#1e1e2e] rounded-xl overflow-hidden border border-[#2a2a3e]">
-        <div className="px-5 py-4 border-b border-[#2a2a3e] flex items-center justify-between">
-          <h2 className="font-semibold text-[#c0c0d8]">All Transfers</h2>
-          <span className="text-xs text-[#6b6b8a]">{ops.length} records</span>
-        </div>
-        {loading ? (
-          <div className="p-10 text-center"><div className="w-8 h-8 border-4 border-[#6c63ff] border-t-transparent rounded-full animate-spin mx-auto mb-3" /><p className="text-[#a0a0b8] text-sm">Loading…</p></div>
-        ) : ops.length === 0 ? (
-          <div className="p-10 text-center"><p className="text-4xl mb-2">🔄</p><p className="text-[#a0a0b8]">No transfers found.</p></div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead><tr className="bg-[#16162a] text-[#a0a0b8] text-xs uppercase">
-                <th className="px-5 py-4 text-left">Reference</th>
-                <th className="px-5 py-4 text-left">Product</th>
-                <th className="px-5 py-4 text-right">Qty</th>
-                <th className="px-5 py-4 text-left">From</th>
-                <th className="px-5 py-4 text-left">To</th>
-                <th className="px-5 py-4 text-left">Status</th>
-                <th className="px-5 py-4 text-right">Actions</th>
-              </tr></thead>
-              <tbody className="divide-y divide-[#2a2a3e]">
-                {ops.map((op, i) => (
-                  <tr key={op.id || i} className="hover:bg-[#252538] transition-colors">
-                    <td className="px-5 py-4 font-mono text-[#a89eff] font-medium">{op.reference}</td>
-                    <td className="px-5 py-4 text-[#e2e2f0]">{op.product_name}</td>
-                    <td className="px-5 py-4 text-right text-[#e2e2f0] font-semibold">{op.qty}</td>
-                    <td className="px-5 py-4 text-[#a0a0b8]">{op.from_warehouse_name}</td>
-                    <td className="px-5 py-4 text-[#a0a0b8]">{op.to_warehouse_name}</td>
-                    <td className="px-5 py-4">
-                       <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                        op.status === 'Done' ? 'bg-green-900/40 border border-green-700 text-green-300' 
-                        : 'bg-yellow-900/40 border border-yellow-700 text-yellow-300'
-                      }`}>
-                        {op.status}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4 text-right">
-                       {op.status !== 'Done' && (
-                         <button
-                          onClick={() => handleValidate(op.id)}
-                          className="px-3 py-1 bg-[#6c63ff] hover:bg-[#5a52e0] text-white rounded-lg text-xs font-medium transition-colors"
-                        >
-                          Validate 
-                        </button>
-                       )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {showForm && (
+          <div className="card" style={{ marginBottom: '20px', padding: '20px' }}>
+            <h2 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '14px' }}>Draft Internal Transfer</h2>
+            <form onSubmit={handleCreate} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label className="form-label">Product</label>
+                <select value={form.productId} onChange={e => setForm(f => ({ ...f, productId: e.target.value }))} required>
+                  <option value="">Select Product…</option>
+                  {products.map(p => <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="form-label">Source Warehouse</label>
+                <select value={form.fromWarehouseId} onChange={e => setForm(f => ({ ...f, fromWarehouseId: e.target.value }))} required>
+                  <option value="">Select Warehouse…</option>
+                  {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="form-label">Destination Warehouse</label>
+                <select value={form.toWarehouseId} onChange={e => setForm(f => ({ ...f, toWarehouseId: e.target.value }))} required>
+                  <option value="">Select Warehouse…</option>
+                  {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="form-label">Quantity</label>
+                <input type="number" placeholder="0" value={form.qty} onChange={e => setForm(f => ({ ...f, qty: +e.target.value }))} min="1" required />
+              </div>
+              <div>
+                <label className="form-label">Scheduled Date</label>
+                <input type="date" value={form.scheduledDate} onChange={e => setForm(f => ({ ...f, scheduledDate: e.target.value }))} required />
+              </div>
+              <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                <button type="button" className="btn-secondary btn-sm" onClick={() => setShowForm(false)}>Cancel</button>
+                <button type="submit" className="btn-primary btn-sm" disabled={saving}>{saving ? 'Creating…' : 'Create Draft Transfer'}</button>
+              </div>
+            </form>
           </div>
         )}
-      </div>
+
+        <div className="card">
+          <div style={{ padding: '14px 20px', borderBottom: '1px solid #E4E4E7', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <h2 style={{ fontSize: '0.9rem', fontWeight: 600 }}>All Transfers</h2>
+            <span style={{ fontSize: '0.75rem', color: '#A1A1AA' }}>{ops.length} records</span>
+          </div>
+          {loading ? (
+            <div className="loading-state"><div className="spinner" /><p>Loading…</p></div>
+          ) : ops.length === 0 ? (
+            <div className="empty-state"><InboxIcon size={32} strokeWidth={1} /><p>No transfers found.</p></div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Reference</th>
+                    <th>Product</th>
+                    <th className="text-right">Qty</th>
+                    <th>From</th>
+                    <th>To</th>
+                    <th>Status</th>
+                    <th className="text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ops.map((op, i) => {
+                    const s = STATUS_STYLE[op.status] || STATUS_STYLE.Draft;
+                    return (
+                      <tr key={op.id || i}>
+                        <td className="mono" style={{ color: '#1D4ED8' }}>{op.reference}</td>
+                        <td style={{ fontWeight: 500 }}>{op.product_name}</td>
+                        <td className="text-right" style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{op.qty}</td>
+                        <td className="muted">{op.from_warehouse_name}</td>
+                        <td className="muted">{op.to_warehouse_name}</td>
+                        <td><span style={{ display: 'inline-flex', padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 600, ...s }}>{op.status}</span></td>
+                        <td className="text-right">
+                          {op.status !== 'Done' && (
+                            <button onClick={() => handleValidate(op.id)} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', height: '28px', padding: '0 10px', background: '#09090B', color: '#FFF', border: 'none', borderRadius: '5px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}>
+                              <CheckCircle size={12} strokeWidth={2.5} />Validate
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </main>
     </div>
   );
 };

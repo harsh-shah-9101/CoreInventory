@@ -1,84 +1,162 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import Sidebar from '../components/Sidebar';
+import api from '../services/api';
+import { User, Mail, Shield, Key, Camera, Check } from 'lucide-react';
 
 const Profile = () => {
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const [form, setForm] = useState({
-    name: user.name || '',
-    email: user.email || '',
-    currentPassword: '',
-    newPassword: '',
-  });
-  const [saving, setSaving] = useState(false);
-  const [success, setSuccess] = useState('');
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [passData, setPassData] = useState({ current: '', new: '', confirm: '' });
+  const [updating, setUpdating] = useState(false);
+  const [msg, setMsg] = useState({ type: '', text: '' });
 
-  const handleSubmit = (e) => {
+  useEffect(() => {
+    // In a real app, this would fetch the current user profile
+    const fetchProfile = async () => {
+      try {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          setUser(JSON.parse(storedUser));
+        }
+      } catch (err) {
+        console.error('Failed to load profile');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  const handlePassUpdate = (e) => {
     e.preventDefault();
-    setSaving(true);
-    // Simulate update
+    setUpdating(true);
+    setMsg({ type: '', text: '' });
+    
+    // Simulate API call
     setTimeout(() => {
-      setSaving(false);
-      setSuccess('Profile updated successfully!');
+      if (passData.new !== passData.confirm) {
+        setMsg({ type: 'error', text: 'New passwords do not match' });
+      } else {
+        setMsg({ type: 'success', text: 'Password successfully updated' });
+        setPassData({ current: '', new: '', confirm: '' });
+      }
+      setUpdating(false);
     }, 1000);
   };
 
-  const inputClass = 'w-full bg-[#16162a] border border-[#2a2a3e] text-[#e2e2f0] rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-[#6c63ff] transition-colors';
+  if (loading) return (
+    <div style={{ display: 'flex', flex: 1, minHeight: '100dvh' }}>
+      <Sidebar />
+      <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FAFAFA' }}>
+        <div className="spinner" />
+      </main>
+    </div>
+  );
 
   return (
-    <div className="p-6 text-[#e2e2f0] max-w-2xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white">My Profile</h1>
-        <p className="text-[#a0a0b8] text-sm mt-1">Manage your account information and security</p>
-      </div>
-
-      {success && <div className="mb-6 p-3 bg-green-900/40 border border-green-700 text-green-300 rounded-lg text-sm">{success}</div>}
-
-      <div className="bg-[#1e1e2e] rounded-xl border border-[#2a2a3e] overflow-hidden">
-        <div className="p-6 border-b border-[#2a2a3e] flex items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-[#6c63ff]/30 flex items-center justify-center text-[#a89eff] font-bold text-2xl">
-            {(form.name || 'U')[0].toUpperCase()}
-          </div>
+    <div style={{ display: 'flex', flex: 1, minHeight: '100dvh' }}>
+      <Sidebar />
+      <main style={{ flex: 1, padding: '28px 32px', overflowY: 'auto', background: '#FAFAFA' }}>
+        <div className="page-header">
           <div>
-            <h2 className="text-xl font-bold text-white">{form.name}</h2>
-            <p className="text-[#a89eff] text-sm font-semibold uppercase tracking-wider">{user.role?.replace('_', ' ')}</p>
+            <h1 className="page-title">Personal Profile</h1>
+            <p className="page-subtitle">Manage your account information and security</p>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="text-xs font-semibold text-[#6b6b8a] uppercase block mb-2">Display Name</label>
-              <input className={inputClass} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '24px' }}>
+          
+          {/* USER INFO CARD */}
+          <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
+            <div style={{ height: '120px', background: 'linear-gradient(135deg, #7C3AED 0%, #C084FC 100%)', position: 'relative' }}>
+              <div style={{ position: 'absolute', bottom: '-40px', left: '24px', width: '80px', height: '80px', borderRadius: '50%', background: 'white', border: '4px solid white', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                <User size={40} color="#7C3AED" />
+                <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s', cursor: 'pointer' }} onMouseEnter={e => e.currentTarget.style.opacity = 1} onMouseLeave={e => e.currentTarget.style.opacity = 0}>
+                  <Camera size={20} color="white" />
+                </div>
+              </div>
             </div>
-            <div>
-              <label className="text-xs font-semibold text-[#6b6b8a] uppercase block mb-2">Email Address</label>
-              <input className={inputClass} type="email" value={form.email} readOnly />
-              <p className="text-[10px] text-[#6b6b8a] mt-1">Email cannot be changed</p>
+            
+            <div style={{ padding: '60px 24px 24px' }}>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#09090B' }}>{user?.fullName || 'User Name'}</h2>
+              <p style={{ fontSize: '0.9rem', color: '#71717A' }}>@{user?.username || 'username'}</p>
+              
+              <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <Mail size={16} color="#A1A1AA" />
+                  <div>
+                    <p style={{ fontSize: '0.75rem', color: '#A1A1AA', fontWeight: 500, textTransform: 'uppercase' }}>Email Address</p>
+                    <p style={{ fontSize: '0.9rem', color: '#09090B' }}>{user?.email || 'email@example.com'}</p>
+                  </div>
+                </div>
+                
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <Shield size={16} color="#A1A1AA" />
+                  <div>
+                    <p style={{ fontSize: '0.75rem', color: '#A1A1AA', fontWeight: 500, textTransform: 'uppercase' }}>Account Role</p>
+                    <div style={{ marginTop: '4px', display: 'inline-flex', padding: '2px 10px', background: '#F5F3FF', color: '#7C3AED', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 600 }}>
+                      {user?.role || 'Admin'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <button className="btn-secondary" style={{ width: '100%', marginTop: '32px' }}>Edit Profile</button>
             </div>
           </div>
 
-          <div className="pt-4 border-t border-[#2a2a3e]">
-            <h3 className="text-white font-semibold mb-4">Change Password</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="text-xs font-semibold text-[#6b6b8a] uppercase block mb-2">Current Password</label>
-                <input className={inputClass} type="password" value={form.currentPassword} onChange={e => setForm(f => ({ ...f, currentPassword: e.target.value }))} />
+          {/* PASSWORD CARD */}
+          <div className="card" style={{ padding: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px' }}>
+              <div style={{ width: '36px', height: '36px', background: '#FEF2F2', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Key size={20} color="#DC2626" strokeWidth={1.5} />
               </div>
-              <div>
-                <label className="text-xs font-semibold text-[#6b6b8a] uppercase block mb-2">New Password</label>
-                <input className={inputClass} type="password" value={form.newPassword} onChange={e => setForm(f => ({ ...f, newPassword: e.target.value }))} />
-              </div>
+              <h2 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Security Settings</h2>
             </div>
+            
+            <form onSubmit={handlePassUpdate} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label className="form-label">Current Password</label>
+                <input type="password" required value={passData.current} onChange={e => setPassData({...passData, current: e.target.value})} placeholder="••••••••" />
+              </div>
+              
+              <div style={{ height: '1px', background: '#F1F1F4', margin: '4px 0' }} />
+              
+              <div>
+                <label className="form-label">New Password</label>
+                <input type="password" required value={passData.new} onChange={e => setPassData({...passData, new: e.target.value})} placeholder="••••••••" />
+              </div>
+              
+              <div>
+                <label className="form-label">Confirm New Password</label>
+                <input type="password" required value={passData.confirm} onChange={e => setPassData({...passData, confirm: e.target.value})} placeholder="••••••••" />
+              </div>
+              
+              {msg.text && (
+                <div style={{ 
+                  padding: '12px', 
+                  borderRadius: '8px', 
+                  fontSize: '0.85rem', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '8px',
+                  background: msg.type === 'success' ? '#F0FDF4' : '#FEF2F2',
+                  color: msg.type === 'success' ? '#15803D' : '#B91C1C',
+                  border: msg.type === 'success' ? '1px solid #BBF7D0' : '1px solid #FECACA'
+                }}>
+                  {msg.type === 'success' ? <Check size={16} /> : <X size={16} />}
+                  {msg.text}
+                </div>
+              )}
+              
+              <button disabled={updating} type="submit" className="btn-primary" style={{ marginTop: '8px' }}>
+                {updating ? 'Updating...' : 'Update Password'}
+              </button>
+            </form>
           </div>
 
-          <button
-            type="submit"
-            disabled={saving}
-            className="px-6 py-2.5 bg-[#6c63ff] hover:bg-[#5a52e0] text-white rounded-lg text-sm font-bold transition-colors disabled:opacity-50"
-          >
-            {saving ? 'Saving changes…' : 'Save Changes'}
-          </button>
-        </form>
-      </div>
+        </div>
+      </main>
     </div>
   );
 };

@@ -1,51 +1,61 @@
 import React, { useState } from 'react';
 import api from '../services/api';
 
-const ALL_STATUSES = ['Draft', 'Waiting', 'Ready', 'Done', 'Canceled'];
-
-const STATUS_COLORS = {
-  Draft:     'bg-gray-700 text-gray-200',
-  Waiting:   'bg-yellow-800 text-yellow-200',
-  Ready:     'bg-blue-800 text-blue-200',
-  Done:      'bg-green-800 text-green-200',
-  Canceled:  'bg-red-800 text-red-200',
+const COLORS = {
+  Draft:    { bg: '#F4F4F5', text: '#52525B' },
+  Waiting:  { bg: '#FFFBEB', text: '#B45309' },
+  Ready:    { bg: '#EFF6FF', text: '#1D4ED8' },
+  Done:     { bg: '#F0FDF4', text: '#15803D' },
+  Canceled: { bg: '#FEF2F2', text: '#B91C1C' },
 };
 
 const StatusDropdown = ({ type, id, currentStatus, allowedStatuses, onUpdated }) => {
+  const [status, setStatus]   = useState(currentStatus);
   const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState('');
-
-  const options = allowedStatuses || ALL_STATUSES;
 
   const handleChange = async (e) => {
     const newStatus = e.target.value;
-    if (newStatus === currentStatus) return;
     setLoading(true);
-    setError('');
     try {
-      await api.patch(`/operations/${type}/${id}/status`, { status: newStatus });
-      onUpdated(id, newStatus);
-    } catch (err) {
-      setError(err.response?.data?.error || 'Update failed');
+      await api.patch(`/${type}/${id}/status`, { status: newStatus });
+      setStatus(newStatus);
+      onUpdated?.(id, newStatus);
+    } catch {
+      alert('Failed to update status');
     } finally {
       setLoading(false);
     }
   };
 
+  const c = COLORS[status] || { bg: '#F4F4F5', text: '#52525B' };
+
   return (
-    <div className="flex flex-col gap-1">
-      <select
-        value={currentStatus}
-        onChange={handleChange}
-        disabled={loading}
-        className={`text-xs font-semibold px-2 py-1 rounded-md border-0 cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#6c63ff] ${STATUS_COLORS[currentStatus] || 'bg-gray-700 text-gray-200'} ${loading ? 'opacity-50 cursor-wait' : ''}`}
-      >
-        {options.map(s => (
-          <option key={s} value={s} className="bg-[#2a2a3e] text-[#e2e2f0]">{s}</option>
-        ))}
-      </select>
-      {error && <p className="text-red-400 text-xs">{error}</p>}
-    </div>
+    <select
+      value={status}
+      onChange={handleChange}
+      disabled={loading}
+      style={{
+        background: c.bg,
+        color: c.text,
+        border: 'none',
+        borderRadius: '4px',
+        padding: '3px 22px 3px 8px',
+        fontSize: '0.72rem',
+        fontWeight: 600,
+        cursor: loading ? 'wait' : 'pointer',
+        outline: 'none',
+        height: '26px',
+        appearance: 'none',
+        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='${encodeURIComponent(c.text)}' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`,
+        backgroundRepeat: 'no-repeat',
+        backgroundPosition: 'right 6px center',
+        minWidth: '90px',
+      }}
+    >
+      {allowedStatuses.map(s => (
+        <option key={s} value={s}>{s}</option>
+      ))}
+    </select>
   );
 };
 

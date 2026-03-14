@@ -1,21 +1,25 @@
 import React, { useState, useEffect } from 'react';
+import Sidebar from '../components/Sidebar';
 import api from '../services/api';
+import { Plus, X, CheckCircle, InboxIcon } from 'lucide-react';
+
+const STATUS_STYLE = {
+  Done:     { background: '#F0FDF4', color: '#15803D' },
+  Ready:    { background: '#EFF6FF', color: '#1D4ED8' },
+  Waiting:  { background: '#FFFBEB', color: '#B45309' },
+  Draft:    { background: '#F4F4F5', color: '#52525B' },
+  Canceled: { background: '#FEF2F2', color: '#B91C1C' },
+};
 
 const Receipts = () => {
-  const [ops, setOps] = useState([]);
-  const [products, setProducts] = useState([]);
+  const [ops, setOps]             = useState([]);
+  const [products, setProducts]   = useState([]);
   const [warehouses, setWarehouses] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [showForm, setShowForm] = useState(false);
-  const [saving, setSaving] = useState(false);
-  
-  const [form, setForm] = useState({ 
-    productId: '', 
-    warehouseId: '', 
-    qty: '', 
-    scheduledDate: new Date().toISOString().split('T')[0] 
-  });
+  const [loading, setLoading]     = useState(true);
+  const [error, setError]         = useState('');
+  const [showForm, setShowForm]   = useState(false);
+  const [saving, setSaving]       = useState(false);
+  const [form, setForm]           = useState({ productId: '', warehouseId: '', qty: '', scheduledDate: new Date().toISOString().split('T')[0] });
 
   const fetchData = async () => {
     setLoading(true); setError('');
@@ -28,27 +32,21 @@ const Receipts = () => {
       setOps(recRes.data?.receipts || []);
       setProducts(prodRes.data?.products || []);
       setWarehouses(warRes.data?.warehouses || []);
-    } catch { 
-      setError('Failed to load receipts.'); 
-    }
+    } catch { setError('Failed to load receipts.'); }
     finally { setLoading(false); }
   };
 
   useEffect(() => { fetchData(); }, []);
 
   const handleCreate = async (e) => {
-    e.preventDefault();
-    setSaving(true);
+    e.preventDefault(); setSaving(true);
     try {
       await api.post('/receipts', form);
       setShowForm(false);
       setForm({ ...form, qty: '', productId: '' });
       fetchData();
-    } catch {
-      setError('Failed to create receipt.');
-    } finally {
-      setSaving(false);
-    }
+    } catch { setError('Failed to create receipt.'); }
+    finally { setSaving(false); }
   };
 
   const handleValidate = async (id) => {
@@ -61,107 +59,115 @@ const Receipts = () => {
     }
   };
 
-  const inputClass = 'w-full bg-[#2a2a3e] border border-[#3a3a55] text-[#e2e2f0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#6c63ff] transition-colors';
-
   return (
-    <div className="p-6 text-[#e2e2f0]">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-           <h1 className="text-2xl font-bold text-white">Receipts (Incoming Stock)</h1>
-           <p className="text-[#a0a0b8] text-sm mt-1">Manage incoming shipments and vendor deliveries</p>
+    <div style={{ display: 'flex', flex: 1, minHeight: '100dvh' }}>
+      <Sidebar />
+      <main style={{ flex: 1, padding: '28px 32px', overflowY: 'auto', background: '#FAFAFA' }}>
+
+        <div className="page-header">
+          <div>
+            <h1 className="page-title">Receipts</h1>
+            <p className="page-subtitle">Manage incoming shipments and vendor deliveries</p>
+          </div>
+          <button
+            className="btn-primary btn-sm"
+            onClick={() => setShowForm(f => !f)}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            {showForm ? <><X size={13} /> Cancel</> : <><Plus size={13} /> New Receipt</>}
+          </button>
         </div>
-        <button
-          onClick={() => setShowForm(f => !f)}
-          className="px-4 py-2 bg-[#6c63ff] hover:bg-[#5a52e0] text-white rounded-lg text-sm font-medium transition-colors"
-        >
-          {showForm ? '✕ Cancel' : '＋ New Receipt'}
-        </button>
-      </div>
 
-      {error && <div className="mb-4 p-3 bg-red-900/40 border border-red-700 text-red-300 rounded-lg text-sm">{error}</div>}
+        {error && <div className="alert-error">{error}</div>}
 
-       {/* Create Form */}
-      {showForm && (
-        <div className="bg-[#1e1e2e] rounded-xl p-5 mb-6 border border-[#2a2a3e]">
-          <h2 className="font-semibold mb-4 text-[#c0c0d8]">Record Incoming Stock</h2>
-          <form onSubmit={handleCreate} className="grid grid-cols-2 gap-4">
-            
-            <select className={inputClass} value={form.productId} onChange={e => setForm(f => ({ ...f, productId: e.target.value }))} required>
-              <option value="">Select Product...</option>
-              {products.map(p => <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>)}
-            </select>
-
-             <select className={inputClass} value={form.warehouseId} onChange={e => setForm(f => ({ ...f, warehouseId: e.target.value }))} required>
-              <option value="">Destination Warehouse...</option>
-              {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-            </select>
-
-            <input className={inputClass} placeholder="Quantity" type="number" value={form.qty} onChange={e => setForm(f => ({ ...f, qty: +e.target.value }))} min="1" required />
-            <input className={inputClass} type="date" value={form.scheduledDate} onChange={e => setForm(f => ({ ...f, scheduledDate: e.target.value }))} required />
-            
-            <button type="submit" disabled={saving} className="px-4 py-2 bg-[#6c63ff] hover:bg-[#5a52e0] text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50">
-              {saving ? 'Creating…' : 'Create Draft Receipt'}
-            </button>
-          </form>
-        </div>
-      )}
-
-      <div className="bg-[#1e1e2e] rounded-xl overflow-hidden border border-[#2a2a3e]">
-        <div className="px-5 py-4 border-b border-[#2a2a3e] flex items-center justify-between">
-          <h2 className="font-semibold text-[#c0c0d8]">All Receipts</h2>
-          <span className="text-xs text-[#6b6b8a]">{ops.length} records</span>
-        </div>
-        {loading ? (
-          <div className="p-10 text-center"><div className="w-8 h-8 border-4 border-[#6c63ff] border-t-transparent rounded-full animate-spin mx-auto mb-3" /><p className="text-[#a0a0b8] text-sm">Loading…</p></div>
-        ) : ops.length === 0 ? (
-          <div className="p-10 text-center"><p className="text-4xl mb-2">📥</p><p className="text-[#a0a0b8]">No receipts found.</p></div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead><tr className="bg-[#16162a] text-[#a0a0b8] text-xs uppercase">
-                <th className="px-5 py-4 text-left">Reference</th>
-                <th className="px-5 py-4 text-left">Product</th>
-                <th className="px-5 py-4 text-right">Qty</th>
-                <th className="px-5 py-4 text-left">Warehouse</th>
-                <th className="px-5 py-4 text-left">Status</th>
-                <th className="px-5 py-4 text-left">Scheduled</th>
-                <th className="px-5 py-4 text-right">Actions</th>
-              </tr></thead>
-              <tbody className="divide-y divide-[#2a2a3e]">
-                {ops.map((op, i) => (
-                  <tr key={op.id || i} className="hover:bg-[#252538] transition-colors">
-                    <td className="px-5 py-4 font-mono text-[#a89eff] font-medium">{op.reference}</td>
-                    <td className="px-5 py-4 text-[#e2e2f0]">{op.product_name}</td>
-                    <td className="px-5 py-4 text-right text-[#e2e2f0] font-semibold">{op.qty}</td>
-                    <td className="px-5 py-4 text-[#a0a0b8]">{op.warehouse_name}</td>
-                    <td className="px-5 py-4">
-                       <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                        op.status === 'Done' ? 'bg-green-900/40 border border-green-700 text-green-300' 
-                        : 'bg-yellow-900/40 border border-yellow-700 text-yellow-300'
-                      }`}>
-                        {op.status}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4 text-[#6b6b8a]">
-                      {op.scheduled_date ? new Date(op.scheduled_date).toLocaleDateString() : '—'}
-                    </td>
-                    <td className="px-5 py-4 text-right">
-                       {op.status !== 'Done' && (
-                         <button
-                          onClick={() => handleValidate(op.id)}
-                          className="px-3 py-1 bg-green-600 hover:bg-green-500 text-white rounded-lg text-xs font-medium transition-colors"
-                        >
-                          Validate
-                        </button>
-                       )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {showForm && (
+          <div className="card" style={{ marginBottom: '20px', padding: '20px' }}>
+            <h2 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '14px' }}>Record Incoming Stock</h2>
+            <form onSubmit={handleCreate} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div>
+                <label className="form-label">Product</label>
+                <select value={form.productId} onChange={e => setForm(f => ({ ...f, productId: e.target.value }))} required>
+                  <option value="">Select Product…</option>
+                  {products.map(p => <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="form-label">Destination Warehouse</label>
+                <select value={form.warehouseId} onChange={e => setForm(f => ({ ...f, warehouseId: e.target.value }))} required>
+                  <option value="">Select Warehouse…</option>
+                  {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="form-label">Quantity</label>
+                <input type="number" placeholder="0" value={form.qty} onChange={e => setForm(f => ({ ...f, qty: +e.target.value }))} min="1" required />
+              </div>
+              <div>
+                <label className="form-label">Scheduled Date</label>
+                <input type="date" value={form.scheduledDate} onChange={e => setForm(f => ({ ...f, scheduledDate: e.target.value }))} required />
+              </div>
+              <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                <button type="button" className="btn-secondary btn-sm" onClick={() => setShowForm(false)}>Cancel</button>
+                <button type="submit" className="btn-primary btn-sm" disabled={saving}>{saving ? 'Creating…' : 'Create Draft Receipt'}</button>
+              </div>
+            </form>
           </div>
         )}
-      </div>
+
+        <div className="card">
+          <div style={{ padding: '14px 20px', borderBottom: '1px solid #E4E4E7', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <h2 style={{ fontSize: '0.9rem', fontWeight: 600 }}>All Receipts</h2>
+            <span style={{ fontSize: '0.75rem', color: '#A1A1AA' }}>{ops.length} records</span>
+          </div>
+          {loading ? (
+            <div className="loading-state"><div className="spinner" /><p>Loading receipts…</p></div>
+          ) : ops.length === 0 ? (
+            <div className="empty-state"><InboxIcon size={32} strokeWidth={1} /><p>No receipts found.</p></div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Reference</th>
+                    <th>Product</th>
+                    <th className="text-right">Qty</th>
+                    <th>Warehouse</th>
+                    <th>Status</th>
+                    <th>Scheduled</th>
+                    <th className="text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ops.map((op, i) => {
+                    const s = STATUS_STYLE[op.status] || STATUS_STYLE.Draft;
+                    return (
+                      <tr key={op.id || i}>
+                        <td className="mono" style={{ color: '#7C3AED' }}>{op.reference}</td>
+                        <td style={{ fontWeight: 500 }}>{op.product_name}</td>
+                        <td className="text-right" style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{op.qty}</td>
+                        <td className="muted">{op.warehouse_name}</td>
+                        <td><span style={{ display: 'inline-flex', padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 600, ...s }}>{op.status}</span></td>
+                        <td className="muted" style={{ fontSize: '0.8rem' }}>{op.scheduled_date ? new Date(op.scheduled_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</td>
+                        <td className="text-right">
+                          {op.status !== 'Done' && (
+                            <button
+                              onClick={() => handleValidate(op.id)}
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', height: '28px', padding: '0 10px', background: '#F0FDF4', color: '#15803D', border: '1px solid #BBF7D0', borderRadius: '5px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}
+                            >
+                              <CheckCircle size={12} strokeWidth={2.5} />
+                              Validate
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </main>
     </div>
   );
 };

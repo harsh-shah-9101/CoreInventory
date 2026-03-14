@@ -2,17 +2,13 @@ import React, { useState, useEffect, useCallback } from 'react';
 import KPICard from './KPICard';
 import FilterBar from './FilterBar';
 import StatusDropdown from './StatusDropdown';
+import Sidebar from './Sidebar';
 import api from '../services/api';
+import { ArrowLeftRight, XCircle, Truck, AlertTriangle, RefreshCw, InboxIcon } from 'lucide-react';
 
 const WAREHOUSE_STATUSES_TRANSFER = ['Draft', 'Waiting', 'Ready', 'Done', 'Canceled'];
 const WAREHOUSE_STATUSES_DELIVERY = ['Done', 'Canceled'];
 const WAREHOUSE_STATUSES_ADJ      = ['Draft', 'Done', 'Canceled'];
-
-const TYPE_COLORS = {
-  Transfer:   'bg-cyan-900/50 text-cyan-300',
-  Adjustment: 'bg-pink-900/50 text-pink-300',
-  Delivery:   'bg-orange-900/50 text-orange-300',
-};
 
 const getAllowedStatuses = (type) => {
   if (type === 'Transfer')   return WAREHOUSE_STATUSES_TRANSFER;
@@ -28,13 +24,35 @@ const getApiType = (type) => {
   return '';
 };
 
+const TYPE_STYLE = {
+  Transfer:   { background: '#EFF6FF', color: '#1D4ED8' },
+  Adjustment: { background: '#F0FDF4', color: '#15803D' },
+  Delivery:   { background: '#FFF7ED', color: '#C2410C' },
+};
+
+const STATUS_STYLE = {
+  Done:     { background: '#F0FDF4', color: '#15803D' },
+  Ready:    { background: '#EFF6FF', color: '#1D4ED8' },
+  Waiting:  { background: '#FFFBEB', color: '#B45309' },
+  Draft:    { background: '#F4F4F5', color: '#52525B' },
+  Canceled: { background: '#FEF2F2', color: '#B91C1C' },
+};
+
+const Badge = ({ label, styleMap }) => {
+  const s = styleMap[label] || { background: '#F4F4F5', color: '#52525B' };
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 600, whiteSpace: 'nowrap', ...s }}>
+      {label}
+    </span>
+  );
+};
+
 const WarehouseDashboard = () => {
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const [data, setData]   = useState(null);
+  const [data, setData]       = useState(null);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({});
-  const [ops, setOps]     = useState([]);
-  const [error, setError] = useState('');
+  const [ops, setOps]         = useState([]);
+  const [error, setError]     = useState('');
 
   const fetchData = useCallback(async () => {
     setLoading(true); setError('');
@@ -54,7 +72,7 @@ const WarehouseDashboard = () => {
       const combined = [
         ...trf.data.operations,
         ...adj.data.operations,
-        ...del.data.operations.filter(o => o.status === 'Ready'), // staff only picks Ready deliveries
+        ...del.data.operations.filter(o => o.status === 'Ready'),
       ];
       combined.sort((a, b) => new Date(b.scheduled_date) - new Date(a.scheduled_date));
       setOps(combined);
@@ -74,87 +92,94 @@ const WarehouseDashboard = () => {
   };
 
   const KPI_CONFIG = [
-    { key: 'scheduledTransfers', title: 'Transfers Scheduled', icon: '🔄', color: '#8b5cf6' },
-    { key: 'outOfStock',         title: 'Out of Stock',        icon: '🚫', color: '#ef4444' },
-    { key: 'pendingDeliveries',  title: 'Pending Deliveries',  icon: '🚚', color: '#3b82f6' },
-    { key: 'lowStock',           title: 'Low Stock Items',     icon: '⚠️', color: '#f59e0b' },
+    { key: 'scheduledTransfers', title: 'Transfers Scheduled', icon: ArrowLeftRight, color: '#8b5cf6' },
+    { key: 'outOfStock',         title: 'Out of Stock',        icon: XCircle,        color: '#ef4444' },
+    { key: 'pendingDeliveries',  title: 'Pending Deliveries',  icon: Truck,          color: '#3b82f6' },
+    { key: 'lowStock',           title: 'Low Stock Items',     icon: AlertTriangle,  color: '#f59e0b' },
   ];
 
   return (
-    <div className="p-6">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Warehouse Dashboard</h1>
-          <p className="text-[#a0a0b8] text-sm mt-1">Transfers, picking &amp; adjustments — update status below</p>
-        </div>
-        <button onClick={fetchData} className="px-4 py-2 bg-[#10b981] hover:bg-[#059669] text-white rounded-lg text-sm font-medium transition-colors">
-          🔄 Refresh
-        </button>
-      </div>
+    <div style={{ display: 'flex', flex: 1, minHeight: '100dvh' }}>
+      <Sidebar />
+      <main style={{ flex: 1, padding: '28px 32px', overflowY: 'auto', background: '#FAFAFA' }}>
 
-      {error && <div className="mb-4 p-4 bg-red-900/40 border border-red-700 text-red-300 rounded-xl text-sm">{error}</div>}
-
-      {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        {KPI_CONFIG.map(({ key, title, icon, color }) => (
-          <KPICard key={key} title={title} value={loading ? '—' : (data?.kpis?.[key] ?? 0)} icon={icon} color={color} />
-        ))}
-      </div>
-
-      {/* Filters */}
-      <FilterBar filters={filters} setFilters={setFilters} warehouses={data?.warehouses || []} categories={data?.categories || []} />
-
-      {/* Operations Table */}
-      <div className="bg-[#1e1e2e] rounded-xl shadow overflow-hidden">
-        <div className="px-5 py-4 border-b border-[#2a2a3e] flex items-center justify-between">
-          <h2 className="font-semibold text-[#c0c0d8]">Transfers, Adjustments &amp; Pick-up</h2>
-          <span className="text-xs text-[#6b6b8a]">{ops.length} records</span>
-        </div>
-        {loading ? (
-          <div className="p-10 text-center"><div className="w-8 h-8 border-4 border-[#10b981] border-t-transparent rounded-full animate-spin mx-auto mb-3" /><p className="text-[#a0a0b8] text-sm">Loading...</p></div>
-        ) : ops.length === 0 ? (
-          <div className="p-10 text-center"><p className="text-4xl mb-2">📭</p><p className="text-[#a0a0b8]">No operations found.</p></div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead><tr className="bg-[#16162a] text-[#a0a0b8] text-xs uppercase">
-                <th className="px-5 py-4 text-left">Reference</th>
-                <th className="px-5 py-4 text-left">Type</th>
-                <th className="px-5 py-4 text-left">Product</th>
-                <th className="px-5 py-4 text-right">Qty</th>
-                <th className="px-5 py-4 text-left">Warehouse</th>
-                <th className="px-5 py-4 text-left">Status</th>
-                <th className="px-5 py-4 text-left">Scheduled</th>
-              </tr></thead>
-              <tbody className="divide-y divide-[#2a2a3e]">
-                {ops.map((op, idx) => (
-                  <tr key={`${op.type}-${op.id}-${idx}`} className="hover:bg-[#252538] transition-colors">
-                    <td className="px-5 py-3 font-mono text-[#c0c0d8] font-medium">{op.reference}</td>
-                    <td className="px-5 py-3">
-                      <span className={`px-2 py-1 rounded-md text-xs font-semibold ${TYPE_COLORS[op.type] || 'bg-gray-700 text-gray-300'}`}>{op.type}</span>
-                    </td>
-                    <td className="px-5 py-3 text-[#e2e2f0]">{op.product}</td>
-                    <td className="px-5 py-3 text-right text-[#e2e2f0] font-semibold">{op.qty > 0 ? `+${op.qty}` : op.qty}</td>
-                    <td className="px-5 py-3 text-[#a0a0b8]">{op.warehouse}</td>
-                    <td className="px-5 py-3">
-                      <StatusDropdown
-                        type={getApiType(op.type)}
-                        id={op.id}
-                        currentStatus={op.status}
-                        allowedStatuses={getAllowedStatuses(op.type)}
-                        onUpdated={(id, status) => handleStatusUpdate(id, status, op.type)}
-                      />
-                    </td>
-                    <td className="px-5 py-3 text-[#6b6b8a] text-xs">
-                      {op.scheduled_date ? new Date(op.scheduled_date).toLocaleDateString() : '—'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {/* Header */}
+        <div className="page-header">
+          <div>
+            <h1 className="page-title">Warehouse Dashboard</h1>
+            <p className="page-subtitle">Transfers, picking & adjustments — update status below</p>
           </div>
-        )}
-      </div>
+          <button className="btn-secondary btn-sm" onClick={fetchData} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <RefreshCw size={13} strokeWidth={2} />
+            Refresh
+          </button>
+        </div>
+
+        {error && <div className="alert-error">{error}</div>}
+
+        {/* KPIs */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px', marginBottom: '20px' }}>
+          {KPI_CONFIG.map(({ key, title, icon, color }) => (
+            <KPICard key={key} title={title} value={loading ? '—' : (data?.kpis?.[key] ?? 0)} icon={icon} color={color} />
+          ))}
+        </div>
+
+        {/* Filters */}
+        <FilterBar filters={filters} setFilters={setFilters} warehouses={data?.warehouses || []} categories={data?.categories || []} />
+
+        {/* Operations Table */}
+        <div className="card">
+          <div style={{ padding: '14px 20px', borderBottom: '1px solid #E4E4E7', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <h2 style={{ fontSize: '0.9rem', fontWeight: 600, color: '#09090B' }}>Transfers, Adjustments & Pickup</h2>
+            <span style={{ fontSize: '0.75rem', color: '#A1A1AA' }}>{ops.length} records</span>
+          </div>
+
+          {loading ? (
+            <div className="loading-state"><div className="spinner" /><p>Loading…</p></div>
+          ) : ops.length === 0 ? (
+            <div className="empty-state"><InboxIcon size={32} strokeWidth={1} /><p>No operations found.</p></div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Reference</th>
+                    <th>Type</th>
+                    <th>Product</th>
+                    <th className="text-right">Qty</th>
+                    <th>Warehouse</th>
+                    <th>Status</th>
+                    <th>Scheduled</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ops.map((op, idx) => (
+                    <tr key={`${op.type}-${op.id}-${idx}`}>
+                      <td className="mono" style={{ color: '#52525B' }}>{op.reference}</td>
+                      <td><Badge label={op.type} styleMap={TYPE_STYLE} /></td>
+                      <td style={{ fontWeight: 500 }}>{op.product}</td>
+                      <td className="text-right" style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{op.qty > 0 ? `+${op.qty}` : op.qty}</td>
+                      <td className="muted">{op.warehouse}</td>
+                      <td>
+                        <StatusDropdown
+                          type={getApiType(op.type)}
+                          id={op.id}
+                          currentStatus={op.status}
+                          allowedStatuses={getAllowedStatuses(op.type)}
+                          onUpdated={(id, status) => handleStatusUpdate(id, status, op.type)}
+                        />
+                      </td>
+                      <td className="muted" style={{ fontSize: '0.8rem' }}>
+                        {op.scheduled_date ? new Date(op.scheduled_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </main>
     </div>
   );
 };
