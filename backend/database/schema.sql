@@ -27,7 +27,9 @@ CREATE TABLE IF NOT EXISTS categories (
 CREATE TABLE IF NOT EXISTS warehouses (
   id SERIAL PRIMARY KEY,
   name VARCHAR(255) NOT NULL UNIQUE,
-  location VARCHAR(255)
+  location VARCHAR(255),
+  code VARCHAR(50) UNIQUE,
+  address TEXT
 );
 
 -- Products
