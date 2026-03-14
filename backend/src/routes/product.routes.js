@@ -3,6 +3,7 @@ const productController = require('../controllers/product.controller');
 
 router.get('/',               productController.getProducts);
 router.post('/',              productController.createProduct);
+router.put('/:id',            productController.updateProduct);
 router.get('/stock',          productController.getStockByLocation);
 router.get('/reorder-rules',  productController.getReorderRules);
 

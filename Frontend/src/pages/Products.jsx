@@ -3,33 +3,43 @@ import api from '../services/api';
 
 const Products = () => {
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ name: '', sku: '', category: '', qty: 0, price: 0 });
+  const [form, setForm] = useState({ id: null, name: '', sku: '', category: '', qty: 0, price: 0 });
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState('');
 
-  const fetchProducts = async () => {
+  const fetchProductsAndCategories = async () => {
     setLoading(true); setError('');
     try {
-      const res = await api.get('/products');
-      setProducts(res.data?.products || res.data || []);
+      const [prodRes, catRes] = await Promise.all([
+        api.get('/products'),
+        api.get('/categories')
+      ]);
+      setProducts(prodRes.data?.products || prodRes.data || []);
+      setCategories(catRes.data?.categories || catRes.data || []);
     } catch {
-      setError('Failed to load products. Make sure the backend is running.');
+      setError('Failed to load data. Make sure the backend is running.');
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { fetchProducts(); }, []);
+  useEffect(() => { fetchProductsAndCategories(); }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault(); setSaving(true); setError(''); setSuccess('');
     try {
-      await api.post('/products', form);
-      setSuccess('Product created successfully!');
+      if (form.id) {
+        await api.put(`/products/${form.id}`, form);
+        setSuccess('Product updated successfully!');
+      } else {
+        await api.post('/products', form);
+        setSuccess('Product created successfully!');
+      }
       setShowForm(false);
-      setForm({ name: '', sku: '', category: '', qty: 0, price: 0 });
-      fetchProducts();
+      setForm({ id: null, name: '', sku: '', category: '', qty: 0, price: 0 });
+      fetchProductsAndCategories();
     } catch { setError('Failed to save product.'); }
     finally { setSaving(false); }
   };
@@ -58,15 +68,19 @@ const Products = () => {
       {/* Create Form */}
       {showForm && (
         <div className="bg-[#1e1e2e] rounded-xl p-5 mb-6 border border-[#2a2a3e]">
-          <h2 className="font-semibold mb-4 text-[#c0c0d8]">New Product</h2>
+          <h2 className="font-semibold mb-4 text-[#c0c0d8]">{form.id ? 'Edit Product' : 'New Product'}</h2>
           <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
             <input className={inputClass} placeholder="Product Name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required />
             <input className={inputClass} placeholder="SKU" value={form.sku} onChange={e => setForm(f => ({ ...f, sku: e.target.value }))} required />
-            <input className={inputClass} placeholder="Category" value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} />
+            
+            <select className={inputClass} value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
+              <option value="">Select Category...</option>
+              {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+            </select>
             <input className={inputClass} placeholder="Quantity" type="number" value={form.qty} onChange={e => setForm(f => ({ ...f, qty: +e.target.value }))} min="0" />
             <input className={inputClass} placeholder="Price" type="number" value={form.price} onChange={e => setForm(f => ({ ...f, price: +e.target.value }))} min="0" step="0.01" />
             <button type="submit" disabled={saving} className="px-4 py-2 bg-[#6c63ff] hover:bg-[#5a52e0] text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50">
-              {saving ? 'Saving…' : 'Create Product'}
+              {saving ? 'Saving…' : (form.id ? 'Update Product' : 'Create Product')}
             </button>
           </form>
         </div>
@@ -91,6 +105,7 @@ const Products = () => {
                 <th className="px-5 py-4 text-left">Category</th>
                 <th className="px-5 py-4 text-right">Qty</th>
                 <th className="px-5 py-4 text-right">Price</th>
+                <th className="px-5 py-4 text-right">Actions</th>
               </tr></thead>
               <tbody className="divide-y divide-[#2a2a3e]">
                 {products.map((p, i) => (
@@ -98,8 +113,20 @@ const Products = () => {
                     <td className="px-5 py-3 font-medium text-[#e2e2f0]">{p.name}</td>
                     <td className="px-5 py-3 font-mono text-[#a89eff] text-xs">{p.sku || '—'}</td>
                     <td className="px-5 py-3 text-[#a0a0b8]">{p.category || '—'}</td>
-                    <td className="px-5 py-3 text-right text-[#e2e2f0] font-semibold">{p.qty ?? p.quantity ?? '—'}</td>
+                    <td className="px-5 py-3 text-right text-[#e2e2f0] font-semibold">{p.qty ?? p.qty_on_hand ?? p.quantity ?? '—'}</td>
                     <td className="px-5 py-3 text-right text-[#a0a0b8]">{p.price != null ? `$${(+p.price).toFixed(2)}` : '—'}</td>
+                    <td className="px-5 py-3 text-right">
+                      <button
+                        onClick={() => {
+                          setForm({ id: p.id, name: p.name, sku: p.sku, category: p.category || '', qty: p.qty_on_hand ?? 0, price: p.price ?? 0 });
+                          setShowForm(true);
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}
+                        className="px-2 py-1 text-xs bg-[#2a2a3e] hover:bg-[#3a3a55] text-[#a0a0b8] rounded transition-all"
+                      >
+                        Edit
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>

@@ -33,8 +33,8 @@ exports.createProduct = async (req, res) => {
     }
 
     const result = await pool.query(
-      'INSERT INTO products (name, sku, category_id, qty_on_hand, created_at) VALUES ($1, $2, $3, $4, NOW()) RETURNING *',
-      [name, sku, categoryId, qty || 0]
+      'INSERT INTO products (name, sku, category_id, qty_on_hand, price, created_at) VALUES ($1, $2, $3, $4, $5, NOW()) RETURNING *',
+      [name, sku, categoryId, qty || 0, price || 0]
     );
     res.status(21).json({ product: result.rows[0] });
   } catch (err) {
@@ -42,6 +42,35 @@ exports.createProduct = async (req, res) => {
     res.status(500).json({ error: 'Failed to create product' });
   }
 };
+
+// PUT /api/products/:id
+exports.updateProduct = async (req, res) => {
+  const { id } = req.params;
+  const { name, sku, category, qty, price } = req.body;
+  try {
+    let categoryId = null;
+    if (category) {
+      const catRes = await pool.query('SELECT id FROM categories WHERE name = $1', [category]);
+      if (catRes.rows.length) {
+        categoryId = catRes.rows[0].id;
+      } else {
+        const newCat = await pool.query('INSERT INTO categories (name) VALUES ($1) RETURNING id', [category]);
+        categoryId = newCat.rows[0].id;
+      }
+    }
+
+    const result = await pool.query(
+      'UPDATE products SET name = $1, sku = $2, category_id = $3, qty_on_hand = $4, price = $5 WHERE id = $6 RETURNING *',
+      [name, sku, categoryId, qty || 0, price || 0, id]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'Product not found' });
+    res.json({ product: result.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update product' });
+  }
+};
+
 
 // GET /api/products/stock
 exports.getStockByLocation = async (req, res) => {
