@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
+import FilterBar from '../components/FilterBar';
 import api from '../services/api';
 import { Plus, X, CheckCircle, InboxIcon } from 'lucide-react';
 
@@ -13,23 +14,30 @@ const InventoryAdjustment = () => {
   const [ops, setOps]             = useState([]);
   const [products, setProducts]   = useState([]);
   const [warehouses, setWarehouses] = useState([]);
+  const [locations, setLocations] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState('');
   const [showForm, setShowForm]   = useState(false);
   const [saving, setSaving]       = useState(false);
-  const [form, setForm]           = useState({ productId: '', warehouseId: '', qtyChange: '', reason: '' });
+  const [form, setForm]           = useState({ productId: '', warehouseId: '', location_id: '', qtyChange: '', reason: '' });
+  const [filters, setFilters]     = useState({ status: '', warehouseId: '', categoryId: '' });
 
   const fetchData = async () => {
     setLoading(true); setError('');
     try {
-      const [recRes, prodRes, warRes] = await Promise.all([
+      const [recRes, prodRes, warRes, locRes, catRes] = await Promise.all([
         api.get('/adjustments'),
         api.get('/products'),
-        api.get('/warehouses')
+        api.get('/warehouses'),
+        api.get('/locations'),
+        api.get('/categories')
       ]);
       setOps(recRes.data?.adjustments || []);
       setProducts(prodRes.data?.products || []);
       setWarehouses(warRes.data?.warehouses || []);
+      setLocations(locRes.data?.locations || []);
+      setCategories(catRes.data?.categories || []);
     } catch { setError('Failed to load adjustments.'); }
     finally { setLoading(false); }
   };
@@ -88,9 +96,18 @@ const InventoryAdjustment = () => {
               </div>
               <div>
                 <label className="form-label">Warehouse</label>
-                <select value={form.warehouseId} onChange={e => setForm(f => ({ ...f, warehouseId: e.target.value }))} required>
+                <select value={form.warehouseId} onChange={e => setForm(f => ({ ...f, warehouseId: e.target.value, location_id: '' }))} required>
                   <option value="">Select Warehouse…</option>
                   {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="form-label">Location (Optional)</label>
+                <select value={form.location_id} onChange={e => setForm(f => ({ ...f, location_id: e.target.value }))} disabled={!form.warehouseId}>
+                  <option value="">Top-level Warehouse</option>
+                  {locations.filter(l => l.warehouse_id == form.warehouseId).map(l => (
+                    <option key={l.id} value={l.id}>{l.name} {l.code !== '-' ? `(${l.code})` : ''}</option>
+                  ))}
                 </select>
               </div>
               <div>
@@ -114,6 +131,9 @@ const InventoryAdjustment = () => {
             <h2 style={{ fontSize: '0.9rem', fontWeight: 600 }}>All Adjustments</h2>
             <span style={{ fontSize: '0.75rem', color: '#A1A1AA' }}>{ops.length} records</span>
           </div>
+          
+          <FilterBar filters={filters} setFilters={setFilters} warehouses={warehouses} categories={categories} />
+
           {loading ? (
             <div className="loading-state"><div className="spinner" /><p>Loading…</p></div>
           ) : ops.length === 0 ? (
@@ -127,13 +147,18 @@ const InventoryAdjustment = () => {
                     <th>Product</th>
                     <th className="text-right">Diff</th>
                     <th>Warehouse</th>
+                    <th>Location</th>
                     <th>Reason</th>
                     <th>Status</th>
                     <th className="text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {ops.map((op, i) => {
+                  {ops
+                    .filter(op => !filters.status || op.status === filters.status)
+                    .filter(op => !filters.warehouseId || String(op.warehouse_id) === String(filters.warehouseId))
+                    .filter(op => !filters.categoryId || String(op.category_id) === String(filters.categoryId))
+                    .map((op, i) => {
                     const s = STATUS_STYLE[op.status] || STATUS_STYLE.Draft;
                     const isPos = op.qty_change > 0;
                     return (
@@ -144,6 +169,7 @@ const InventoryAdjustment = () => {
                           {isPos ? `+${op.qty_change}` : op.qty_change}
                         </td>
                         <td className="muted">{op.warehouse_name}</td>
+                        <td className="muted">{op.location_name || '—'}</td>
                         <td className="muted" style={{ maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{op.reason}</td>
                         <td><span style={{ display: 'inline-flex', padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 600, ...s }}>{op.status}</span></td>
                         <td className="text-right">

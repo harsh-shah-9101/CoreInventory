@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
+import FilterBar from '../components/FilterBar';
 import api from '../services/api';
 import { Plus, X, CheckCircle, InboxIcon } from 'lucide-react';
 
@@ -15,23 +16,30 @@ const MoveHistory = () => {
   const [ops, setOps]             = useState([]);
   const [products, setProducts]   = useState([]);
   const [warehouses, setWarehouses] = useState([]);
+  const [locations, setLocations] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState('');
   const [showForm, setShowForm]   = useState(false);
   const [saving, setSaving]       = useState(false);
-  const [form, setForm]           = useState({ productId: '', fromWarehouseId: '', toWarehouseId: '', qty: '', scheduledDate: new Date().toISOString().split('T')[0] });
+  const [form, setForm]           = useState({ productId: '', fromWarehouseId: '', from_location_id: '', toWarehouseId: '', to_location_id: '', qty: '', scheduledDate: new Date().toISOString().split('T')[0] });
+  const [filters, setFilters]     = useState({ status: '', warehouseId: '', categoryId: '' });
 
   const fetchData = async () => {
     setLoading(true); setError('');
     try {
-      const [recRes, prodRes, warRes] = await Promise.all([
+      const [recRes, prodRes, warRes, locRes, catRes] = await Promise.all([
         api.get('/transfers'),
         api.get('/products'),
-        api.get('/warehouses')
+        api.get('/warehouses'),
+        api.get('/locations'),
+        api.get('/categories')
       ]);
       setOps(recRes.data?.transfers || []);
       setProducts(prodRes.data?.products || []);
       setWarehouses(warRes.data?.warehouses || []);
+      setLocations(locRes.data?.locations || []);
+      setCategories(catRes.data?.categories || []);
     } catch { setError('Failed to load transfers.'); }
     finally { setLoading(false); }
   };
@@ -59,6 +67,15 @@ const MoveHistory = () => {
       alert(err.response?.data?.error || 'Validation failed');
     }
   };
+
+  const filteredOps = ops.filter(op => {
+    if (filters.status && op.status !== filters.status) return false;
+    if (filters.warehouseId && 
+        String(op.from_warehouse_id) !== String(filters.warehouseId) && 
+        String(op.to_warehouse_id) !== String(filters.warehouseId)) return false;
+    if (filters.categoryId && String(op.category_id) !== String(filters.categoryId)) return false;
+    return true;
+  });
 
   return (
     <div style={{ display: 'flex', flex: 1, minHeight: '100dvh' }}>
@@ -90,16 +107,34 @@ const MoveHistory = () => {
               </div>
               <div>
                 <label className="form-label">Source Warehouse</label>
-                <select value={form.fromWarehouseId} onChange={e => setForm(f => ({ ...f, fromWarehouseId: e.target.value }))} required>
+                <select value={form.fromWarehouseId} onChange={e => setForm(f => ({ ...f, fromWarehouseId: e.target.value, from_location_id: '' }))} required>
                   <option value="">Select Warehouse…</option>
                   {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
                 </select>
               </div>
               <div>
+                <label className="form-label">From Location (Optional)</label>
+                <select value={form.from_location_id} onChange={e => setForm(f => ({ ...f, from_location_id: e.target.value }))} disabled={!form.fromWarehouseId}>
+                  <option value="">Top-level Warehouse</option>
+                  {locations.filter(l => l.warehouse_id == form.fromWarehouseId).map(l => (
+                    <option key={l.id} value={l.id}>{l.name} {l.code !== '-' ? `(${l.code})` : ''}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
                 <label className="form-label">Destination Warehouse</label>
-                <select value={form.toWarehouseId} onChange={e => setForm(f => ({ ...f, toWarehouseId: e.target.value }))} required>
+                <select value={form.toWarehouseId} onChange={e => setForm(f => ({ ...f, toWarehouseId: e.target.value, to_location_id: '' }))} required>
                   <option value="">Select Warehouse…</option>
                   {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="form-label">To Location (Optional)</label>
+                <select value={form.to_location_id} onChange={e => setForm(f => ({ ...f, to_location_id: e.target.value }))} disabled={!form.toWarehouseId}>
+                  <option value="">Top-level Warehouse</option>
+                  {locations.filter(l => l.warehouse_id == form.toWarehouseId).map(l => (
+                    <option key={l.id} value={l.id}>{l.name} {l.code !== '-' ? `(${l.code})` : ''}</option>
+                  ))}
                 </select>
               </div>
               <div>
@@ -118,14 +153,21 @@ const MoveHistory = () => {
           </div>
         )}
 
+        <FilterBar 
+          filters={filters} 
+          setFilters={setFilters} 
+          warehouses={warehouses} 
+          categories={categories} 
+        />
+
         <div className="card">
           <div style={{ padding: '14px 20px', borderBottom: '1px solid #E4E4E7', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <h2 style={{ fontSize: '0.9rem', fontWeight: 600 }}>All Transfers</h2>
-            <span style={{ fontSize: '0.75rem', color: '#A1A1AA' }}>{ops.length} records</span>
+            <span style={{ fontSize: '0.75rem', color: '#A1A1AA' }}>{filteredOps.length} records</span>
           </div>
           {loading ? (
             <div className="loading-state"><div className="spinner" /><p>Loading…</p></div>
-          ) : ops.length === 0 ? (
+          ) : filteredOps.length === 0 ? (
             <div className="empty-state"><InboxIcon size={32} strokeWidth={1} /><p>No transfers found.</p></div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
@@ -135,22 +177,22 @@ const MoveHistory = () => {
                     <th>Reference</th>
                     <th>Product</th>
                     <th className="text-right">Qty</th>
-                    <th>From</th>
-                    <th>To</th>
+                    <th>From (Whs/Loc)</th>
+                    <th>To (Whs/Loc)</th>
                     <th>Status</th>
                     <th className="text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {ops.map((op, i) => {
+                  {filteredOps.map((op, i) => {
                     const s = STATUS_STYLE[op.status] || STATUS_STYLE.Draft;
                     return (
                       <tr key={op.id || i}>
                         <td className="mono" style={{ color: '#1D4ED8' }}>{op.reference}</td>
                         <td style={{ fontWeight: 500 }}>{op.product_name}</td>
                         <td className="text-right" style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{op.qty}</td>
-                        <td className="muted">{op.from_warehouse_name}</td>
-                        <td className="muted">{op.to_warehouse_name}</td>
+                        <td className="muted">{op.from_warehouse_name}{op.from_location_name ? ` / ${op.from_location_name}` : ''}</td>
+                        <td className="muted">{op.to_warehouse_name}{op.to_location_name ? ` / ${op.to_location_name}` : ''}</td>
                         <td><span style={{ display: 'inline-flex', padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 600, ...s }}>{op.status}</span></td>
                         <td className="text-right">
                           {op.status !== 'Done' && (

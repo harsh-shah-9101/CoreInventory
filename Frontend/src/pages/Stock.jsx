@@ -1,21 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import api from '../services/api';
-import { Layers, Check, X } from 'lucide-react';
+import { Layers } from 'lucide-react';
 
 const Stock = () => {
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading]   = useState(true);
-  const [error, setError]       = useState('');
-  const [editingId, setEditingId]   = useState(null);
-  const [editValue, setEditValue]   = useState('');
-  const [savingId, setSavingId]     = useState(null);
+  const [stockRecords, setStockRecords] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const fetchProducts = async () => {
+  const fetchStock = async () => {
     setLoading(true); setError('');
     try {
-      const res = await api.get('/products');
-      setProducts(res.data?.products || res.data || []);
+      const res = await api.get('/products/stock');
+      setStockRecords(res.data?.stock || []);
     } catch {
       setError('Failed to load stock data.');
     } finally {
@@ -23,43 +20,16 @@ const Stock = () => {
     }
   };
 
-  useEffect(() => { fetchProducts(); }, []);
-
-  const handleEditStart = (product) => {
-    setEditingId(product.id);
-    setEditValue(product.qty_on_hand ?? 0);
-  };
-
-  const handleEditSave = async (id) => {
-    if (editingId === null) return;
-    const numericValue = parseInt(editValue, 10) || 0;
-    setEditingId(null);
-    setSavingId(id);
-    try {
-      await api.put(`/products/${id}/stock`, { qty_on_hand: numericValue });
-      setProducts(prev => prev.map(p => p.id === id ? { ...p, qty_on_hand: numericValue } : p));
-    } catch {
-      setError('Failed to update stock.');
-      fetchProducts();
-    } finally {
-      setSavingId(null);
-    }
-  };
-
-  const handleKeyDown = (e, id) => {
-    if (e.key === 'Enter') handleEditSave(id);
-    else if (e.key === 'Escape') setEditingId(null);
-  };
+  useEffect(() => { fetchStock(); }, []);
 
   return (
     <div style={{ display: 'flex', flex: 1, minHeight: '100dvh' }}>
       <Sidebar />
       <main style={{ flex: 1, padding: '28px 32px', overflowY: 'auto', background: '#FAFAFA' }}>
-
         <div className="page-header">
           <div>
-            <h1 className="page-title">Stock</h1>
-            <p className="page-subtitle">Current on-hand quantities — click a value to edit inline</p>
+            <h1 className="page-title">Stock per Location</h1>
+            <p className="page-subtitle">Current stock availability distributed by warehouse and specific locations</p>
           </div>
         </div>
 
@@ -70,10 +40,10 @@ const Stock = () => {
         ) : (
           <div className="card">
             <div style={{ padding: '14px 20px', borderBottom: '1px solid #E4E4E7', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <h2 style={{ fontSize: '0.9rem', fontWeight: 600, color: '#09090B' }}>All Products</h2>
-              <span style={{ fontSize: '0.75rem', color: '#A1A1AA' }}>{products.length} items</span>
+              <h2 style={{ fontSize: '0.9rem', fontWeight: 600, color: '#09090B' }}>Detailed Inventory</h2>
+              <span style={{ fontSize: '0.75rem', color: '#A1A1AA' }}>{stockRecords.length} records</span>
             </div>
-            {products.length === 0 ? (
+            {stockRecords.length === 0 ? (
               <div className="empty-state"><Layers size={32} strokeWidth={1} /><p>No stock data available.</p></div>
             ) : (
               <div style={{ overflowX: 'auto' }}>
@@ -81,70 +51,28 @@ const Stock = () => {
                   <thead>
                     <tr>
                       <th>Product</th>
-                      <th>SKU</th>
-                      <th>Category</th>
-                      <th className="text-right">Per Unit Cost</th>
+                      <th>Warehouse</th>
+                      <th>Location</th>
                       <th className="text-right">On Hand</th>
-                      <th className="text-right">Free to Use</th>
+                      <th className="text-right">Reserved</th>
+                      <th className="text-right">Available</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {products.map((p) => {
-                      const isEditing = editingId === p.id;
-                      const isSaving  = savingId === p.id;
-                      const qty = p.qty_on_hand ?? 0;
-
-                      return (
-                        <tr key={p.id}>
-                          <td style={{ fontWeight: 500 }}>{p.name}</td>
-                          <td className="mono" style={{ color: '#7C3AED' }}>{p.sku || '—'}</td>
-                          <td className="muted">{p.category || '—'}</td>
-                          <td className="text-right muted">{p.price != null ? `$${(+p.price).toFixed(2)}` : '—'}</td>
-                          <td className="text-right">
-                            {isSaving ? (
-                              <div className="spinner" style={{ width: 14, height: 14, marginLeft: 'auto' }} />
-                            ) : isEditing ? (
-                              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
-                                <input
-                                  autoFocus
-                                  type="number"
-                                  value={editValue}
-                                  onChange={e => setEditValue(e.target.value)}
-                                  onBlur={() => handleEditSave(p.id)}
-                                  onKeyDown={e => handleKeyDown(e, p.id)}
-                                  style={{ width: '64px', height: '28px', textAlign: 'center', fontSize: '0.85rem', fontFamily: 'var(--font-mono)', padding: '0 6px' }}
-                                />
-                                <button onClick={() => handleEditSave(p.id)} style={{ background: '#F0FDF4', color: '#15803D', border: 'none', borderRadius: '4px', padding: '3px 6px', cursor: 'pointer' }}>
-                                  <Check size={12} strokeWidth={2.5} />
-                                </button>
-                                <button onClick={() => setEditingId(null)} style={{ background: '#FEF2F2', color: '#B91C1C', border: 'none', borderRadius: '4px', padding: '3px 6px', cursor: 'pointer' }}>
-                                  <X size={12} strokeWidth={2.5} />
-                                </button>
-                              </span>
-                            ) : (
-                              <span
-                                onClick={() => handleEditStart(p)}
-                                title="Click to update stock"
-                                style={{
-                                  cursor: 'pointer',
-                                  fontFamily: 'var(--font-mono)',
-                                  fontWeight: 600,
-                                  padding: '2px 8px',
-                                  borderRadius: '4px',
-                                  display: 'inline-block',
-                                  transition: 'background 120ms',
-                                }}
-                                onMouseEnter={e => e.currentTarget.style.background = '#F4F4F5'}
-                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                              >
-                                {qty}
-                              </span>
-                            )}
-                          </td>
-                          <td className="text-right" style={{ fontFamily: 'var(--font-mono)', color: '#52525B' }}>{qty}</td>
-                        </tr>
-                      );
-                    })}
+                    {stockRecords.map((record, idx) => (
+                      <tr key={idx}>
+                        <td style={{ fontWeight: 500 }}>{record.product}</td>
+                        <td className="muted">{record.warehouse || '—'}</td>
+                        <td className="muted">
+                           {record.location_name} {record.location_code !== '-' && `(${record.location_code})`}
+                        </td>
+                        <td className="text-right" style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+                          {record.on_hand} <span style={{ fontSize: '0.75rem', color: '#A1A1AA', fontWeight: 'normal' }}>{record.unit_of_measure}</span>
+                        </td>
+                        <td className="text-right" style={{ fontFamily: 'var(--font-mono)', color: '#A1A1AA' }}>{record.reserved}</td>
+                        <td className="text-right" style={{ fontFamily: 'var(--font-mono)', color: '#52525B' }}>{record.available}</td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
