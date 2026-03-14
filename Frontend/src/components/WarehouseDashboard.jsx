@@ -81,17 +81,10 @@ const WarehouseDashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-[#13131f] text-[#e2e2f0] p-6">
-      {/* Header */}
+    <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <div className="flex items-center gap-3 mb-1">
-            <span className="bg-[#10b981]/20 text-[#10b981] text-xs font-semibold px-3 py-1 rounded-full border border-[#10b981]/30">
-              🏭 Warehouse Staff
-            </span>
-            <span className="text-[#6b6b8a] text-sm">Welcome, {user.name}</span>
-          </div>
-          <h1 className="text-3xl font-bold text-white">Warehouse Dashboard</h1>
+          <h1 className="text-2xl font-bold text-white">Warehouse Dashboard</h1>
           <p className="text-[#a0a0b8] text-sm mt-1">Transfers, picking &amp; adjustments — update status below</p>
         </div>
         <button onClick={fetchData} className="px-4 py-2 bg-[#10b981] hover:bg-[#059669] text-white rounded-lg text-sm font-medium transition-colors">
