@@ -32,6 +32,15 @@ CREATE TABLE IF NOT EXISTS warehouses (
   address TEXT
 );
 
+-- Sub-Locations (Rooms, Aisles, etc.)
+CREATE TABLE IF NOT EXISTS locations (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  code VARCHAR(50) UNIQUE NOT NULL,
+  warehouse_id INTEGER REFERENCES warehouses(id) ON DELETE CASCADE,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
 -- Products
 CREATE TABLE IF NOT EXISTS products (
   id SERIAL PRIMARY KEY,
