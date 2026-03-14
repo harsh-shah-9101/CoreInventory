@@ -71,6 +71,25 @@ exports.updateProduct = async (req, res) => {
   }
 };
 
+// PUT /api/products/:id/stock
+exports.updateStock = async (req, res) => {
+  const { id } = req.params;
+  const { qty_on_hand } = req.body;
+  if (qty_on_hand === undefined) return res.status(400).json({ error: 'qty_on_hand is required' });
+
+  try {
+    const result = await pool.query(
+      'UPDATE products SET qty_on_hand = $1 WHERE id = $2 RETURNING *',
+      [qty_on_hand, id]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'Product not found' });
+    res.json({ product: result.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update stock' });
+  }
+};
+
 
 // GET /api/products/stock
 exports.getStockByLocation = async (req, res) => {
