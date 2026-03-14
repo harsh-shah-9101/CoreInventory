@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { authService } from '../services/api';
 
 const Login = () => {
-  const [email, setEmail]     = useState('');
+  const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError]     = useState('');
   const navigate = useNavigate();
@@ -11,7 +11,7 @@ const Login = () => {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const data = await authService.login({ email, password });
+      const data = await authService.login({ login_id: loginId, password });
       // Store user info with role in localStorage
       localStorage.setItem('user', JSON.stringify(data.user));
       // Redirect based on role
@@ -36,16 +36,16 @@ const Login = () => {
         {error && <div className="mb-4 p-3 bg-red-900/40 border border-red-700 text-red-300 rounded-lg text-sm">{error}</div>}
 
         <form onSubmit={handleLogin} className="flex flex-col gap-4">
-          <input type="email" placeholder="Email Address" value={email} onChange={e => setEmail(e.target.value)} required className={inputClass} />
+          <input type="text" placeholder="Login Id" value={loginId} onChange={e => setLoginId(e.target.value)} required className={inputClass} />
           <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required className={inputClass} />
 
           <button type="submit" className="w-full bg-[#6c63ff] hover:bg-[#5a52e0] text-white font-semibold py-3 rounded-lg transition-colors mt-2">
-            Sign In
+            SIGN IN
           </button>
         </form>
 
         <p className="text-center text-sm text-[#6b6b8a] mt-5">
-          Don't have an account? <Link to="/signup" className="text-[#6c63ff] hover:text-[#9b93ff]">Sign up here</Link>
+          <Link to="/signup" className="hover:text-[#9b93ff]">Forget Password ? | Sign Up</Link>
         </p>
       </div>
     </div>

@@ -4,16 +4,30 @@ import { authService } from '../services/api';
 
 const Signup = () => {
   const [name, setName]       = useState('');
+  const [loginId, setLoginId] = useState('');
   const [email, setEmail]     = useState('');
   const [password, setPassword] = useState('');
+  const [reEnterPassword, setReEnterPassword] = useState('');
   const [role, setRole]       = useState('manager');
   const [error, setError]     = useState('');
   const navigate = useNavigate();
 
   const handleSignup = async (e) => {
     e.preventDefault();
+    setError('');
+
+    if (loginId.length < 6 || loginId.length > 12) {
+      return setError('Login ID must be between 6 and 12 characters.');
+    }
+    if (password.length <= 8 || !/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+      return setError('Password must be > 8 characters and contain at least one lowercase, one uppercase, and one special character.');
+    }
+    if (password !== reEnterPassword) {
+      return setError('Passwords do not match.');
+    }
+
     try {
-      await authService.signup({ name, email, password, role });
+      await authService.signup({ name, login_id: loginId, email, password, role });
       navigate('/login');
     } catch (err) {
       setError(err.response?.data?.error || 'Signup failed');
@@ -32,8 +46,10 @@ const Signup = () => {
 
         <form onSubmit={handleSignup} className="flex flex-col gap-4">
           <input type="text" placeholder="Full Name" value={name} onChange={e => setName(e.target.value)} required className={inputClass} />
-          <input type="email" placeholder="Email Address" value={email} onChange={e => setEmail(e.target.value)} required className={inputClass} />
-          <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required className={inputClass} />
+          <input type="text" placeholder="Enter Login Id" value={loginId} onChange={e => setLoginId(e.target.value)} required className={inputClass} />
+          <input type="email" placeholder="Enter Email Id" value={email} onChange={e => setEmail(e.target.value)} required className={inputClass} />
+          <input type="password" placeholder="Enter Password" value={password} onChange={e => setPassword(e.target.value)} required className={inputClass} />
+          <input type="password" placeholder="Re-Enter Password" value={reEnterPassword} onChange={e => setReEnterPassword(e.target.value)} required className={inputClass} />
 
           {/* Role Selector */}
           <div>
@@ -57,7 +73,7 @@ const Signup = () => {
           </div>
 
           <button type="submit" className="w-full bg-[#6c63ff] hover:bg-[#5a52e0] text-white font-semibold py-3 rounded-lg transition-colors mt-2">
-            Create Account
+            SIGN UP
           </button>
         </form>
 

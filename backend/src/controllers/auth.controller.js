@@ -3,34 +3,61 @@ const sendEmail = require('../utils/sendEmail');
 
 // SIGNUP
 exports.signup = async (req, res) => {
-  const { name, email, password, role } = req.body;
+  const { name, login_id, email, password, role } = req.body;
   const userRole = role === 'warehouse_staff' ? 'warehouse_staff' : 'manager';
+
+  // 1. login ID should be unique and must be in between 6-12 characters.
+  if (!login_id || login_id.length < 6 || login_id.length > 12) {
+    return res.status(400).json({ error: 'Login ID must be between 6 and 12 characters.' });
+  }
+
+  // 3. Password must contain a small case, a large case and a special character and length should be more than 8 characters.
+  if (!password || password.length <= 8) {
+    return res.status(400).json({ error: 'Password must be more than 8 characters.' });
+  }
+  if (!/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+    return res.status(400).json({ error: 'Password must contain a small case, a large case, and a special character.' });
+  }
+
   try {
     const result = await pool.query(
-      'INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role',
-      [name, email, password, userRole]
+      'INSERT INTO users (name, login_id, email, password, role) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, login_id, email, role',
+      [name, login_id, email, password, userRole]
     );
     res.status(201).json({ message: 'Account created', user: result.rows[0] });
   } catch (err) {
-    res.status(400).json({ error: 'Email already exists' });
+    if (err.constraint === 'users_email_key') {
+      return res.status(400).json({ error: 'Email already exists' });
+    }
+    if (err.constraint === 'unique_login_id') {
+      return res.status(400).json({ error: 'Login ID already exists' });
+    }
+    console.error(err);
+    res.status(400).json({ error: 'Signup failed. Check credentials.' });
   }
 };
 
 // LOGIN
 exports.login = async (req, res) => {
-  const { email, password } = req.body;
-  const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+  const { login_id, password } = req.body;
+  
+  // Use exact error message from diagram: "Invalid Login Id or Password"
+  if (!login_id || !password) {
+    return res.status(401).json({ error: 'Invalid Login Id or Password' });
+  }
+
+  const result = await pool.query('SELECT * FROM users WHERE login_id = $1', [login_id]);
 
   if (!result.rows.length)
-    return res.status(404).json({ error: 'User not found' });
+    return res.status(401).json({ error: 'Invalid Login Id or Password' });
 
   const user = result.rows[0];
 
   if (user.password !== password)
-    return res.status(401).json({ error: 'Invalid credentials' });
+    return res.status(401).json({ error: 'Invalid Login Id or Password' });
 
   // Save user in session (including role)
-  req.session.user = { id: user.id, name: user.name, email: user.email, role: user.role };
+  req.session.user = { id: user.id, name: user.name, login_id: user.login_id, email: user.email, role: user.role };
   res.json({ message: 'Login successful', user: req.session.user });
 };
 
