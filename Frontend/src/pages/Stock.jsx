@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import api from '../services/api';
-import { Layers } from 'lucide-react';
+import { Layers, Download } from 'lucide-react';
 
 const Stock = () => {
   const [stockRecords, setStockRecords] = useState([]);
@@ -22,15 +22,56 @@ const Stock = () => {
 
   useEffect(() => { fetchStock(); }, []);
 
+  const handleDownload = () => {
+    if (stockRecords.length === 0) return;
+    
+    const headers = ['Product', 'Warehouse', 'Location Name', 'Location Code', 'On Hand', 'Unit', 'Available'];
+    
+    const rows = stockRecords.map(record => [
+      `"${(record.product || '').replace(/"/g, '""')}"`,
+      `"${(record.warehouse || '-').replace(/"/g, '""')}"`,
+      `"${(record.location_name || '').replace(/"/g, '""')}"`,
+      `"${(record.location_code !== '-' ? record.location_code : '').replace(/"/g, '""')}"`,
+      record.on_hand,
+      `"${(record.unit_of_measure || '').replace(/"/g, '""')}"`,
+      record.available
+    ]);
+    
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `Stock_Report_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div style={{ display: 'flex', flex: 1, minHeight: '100dvh' }}>
       <Sidebar />
       <main style={{ flex: 1, padding: '28px 32px', overflowY: 'auto', background: '#FAFAFA' }}>
-        <div className="page-header">
+        <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <h1 className="page-title">Stock per Location</h1>
             <p className="page-subtitle">Current stock availability distributed by warehouse and specific locations</p>
           </div>
+          <button 
+            onClick={handleDownload}
+            disabled={stockRecords.length === 0}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '8px',
+              padding: '8px 16px', background: '#09090B', color: '#FFF',
+              border: 'none', borderRadius: '6px', fontSize: '0.85rem',
+              fontWeight: 500, cursor: stockRecords.length === 0 ? 'not-allowed' : 'pointer',
+              opacity: stockRecords.length === 0 ? 0.5 : 1
+            }}
+          >
+            <Download size={15} />
+            Export CSV
+          </button>
         </div>
 
         {error && <div className="alert-error">{error}</div>}
