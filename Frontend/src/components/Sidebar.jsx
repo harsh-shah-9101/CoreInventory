@@ -20,7 +20,6 @@ const NAV = [
       { label: 'Products',         icon: Archive,     to: '/products' },
       { label: 'Stock',            icon: Layers,      to: '/products/stock' },
       { label: 'Categories',       icon: Sliders,     to: '/products/categories' },
-      { label: 'Reordering Rules', icon: RefreshCw,   to: '/products/reorder' },
     ],
   },
   {
@@ -155,6 +154,7 @@ const NavItem = ({ item }) => {
               <NavLink
                 key={child.to}
                 to={child.to}
+                end
                 style={({ isActive }) => S.item(isActive)}
                 onMouseEnter={e => { if (!e.currentTarget.style.background.includes('27272A')) { e.currentTarget.style.background = '#18181B'; } }}
                 onMouseLeave={e => { if (!e.currentTarget.style.background.includes('27272A')) { e.currentTarget.style.background = 'transparent'; } }}
@@ -172,6 +172,7 @@ const NavItem = ({ item }) => {
   return (
     <NavLink
       to={item.to}
+      end
       style={({ isActive }) => S.item(isActive)}
       onMouseEnter={e => { if (!e.currentTarget.style.background.includes('27272A')) { e.currentTarget.style.background = '#18181B'; } }}
       onMouseLeave={e => { if (!e.currentTarget.style.background.includes('27272A')) { e.currentTarget.style.background = 'transparent'; } }}
@@ -262,6 +263,7 @@ const Sidebar = () => {
         {/* My Profile link */}
         <NavLink
           to="/profile"
+          end
           style={({ isActive }) => ({
             display: 'flex', alignItems: 'center', gap: '8px',
             padding: '6px 10px', borderRadius: '6px',

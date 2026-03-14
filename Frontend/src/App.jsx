@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Signup from './components/Signup';
 import Login from './components/Login';
+import ForgotPassword from './components/ForgotPassword';
 import Dashboard from './components/Dashboard';
 import ManagerDashboard from './components/ManagerDashboard';
 import WarehouseDashboard from './components/WarehouseDashboard';
@@ -10,7 +11,6 @@ import Layout from './components/Layout';
 import Products from './pages/Products';
 import Stock from './pages/Stock';
 import ProductCategories from './pages/ProductCategories';
-import ReorderingRules from './pages/ReorderingRules';
 import Receipts from './pages/Receipts';
 import DeliveryOrders from './pages/DeliveryOrders';
 import InventoryAdjustment from './pages/InventoryAdjustment';
@@ -25,9 +25,10 @@ function App() {
     <Router>
       <div className="App">
         <Routes>
-          <Route path="/"          element={<Navigate to="/login" replace />} />
-          <Route path="/signup"    element={<Signup />} />
-          <Route path="/login"     element={<Login />} />
+          <Route path="/"               element={<Navigate to="/login" replace />} />
+          <Route path="/signup"         element={<Signup />} />
+          <Route path="/login"          element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
           
           {/* Authenticated Routes wrapped in Layout */}
           <Route path="/manager"   element={<Layout><ManagerDashboard /></Layout>} />
@@ -38,8 +39,7 @@ function App() {
           <Route path="/products"            element={<Layout><Products /></Layout>} />
           <Route path="/products/stock"      element={<Layout><Stock /></Layout>} />
           <Route path="/products/categories" element={<Layout><ProductCategories /></Layout>} />
-          <Route path="/products/reorder"    element={<Layout><ReorderingRules /></Layout>} />
-          
+
           {/* Operations */}
           <Route path="/operations/receipts"    element={<Layout><Receipts /></Layout>} />
           <Route path="/operations/deliveries" element={<Layout><DeliveryOrders /></Layout>} />

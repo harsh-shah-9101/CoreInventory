@@ -4,10 +4,11 @@ const pool = require('../config/db');
 exports.getReceipts = async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT r.*, p.name AS product_name, w.name AS warehouse_name
+      SELECT r.*, p.name AS product_name, p.category_id, w.name AS warehouse_name, l.name as destination_location_name
       FROM receipts r
       JOIN products p ON p.id = r.product_id
       JOIN warehouses w ON w.id = r.warehouse_id
+      LEFT JOIN locations l ON l.id = r.destination_location_id
       ORDER BY r.created_at DESC
     `);
     res.json({ receipts: result.rows });
@@ -19,7 +20,7 @@ exports.getReceipts = async (req, res) => {
 
 // Create Draft Receipt
 exports.createReceipt = async (req, res) => {
-  const { productId, warehouseId, qty, scheduledDate } = req.body;
+  const { productId, warehouseId, qty, scheduledDate, destination_location_id } = req.body;
   if (!productId || !warehouseId || !qty) {
     return res.status(400).json({ error: 'Product, Warehouse, and Quantity are required' });
   }
@@ -27,9 +28,9 @@ exports.createReceipt = async (req, res) => {
   try {
     const reference = 'REC-' + Date.now().toString().slice(-6);
     const result = await pool.query(
-      `INSERT INTO receipts (reference, product_id, warehouse_id, qty, status, scheduled_date)
-       VALUES ($1, $2, $3, $4, 'Draft', $5) RETURNING *`,
-      [reference, productId, warehouseId, qty, scheduledDate || new Date()]
+      `INSERT INTO receipts (reference, product_id, warehouse_id, qty, status, scheduled_date, destination_location_id)
+       VALUES ($1, $2, $3, $4, 'Draft', $5, $6) RETURNING *`,
+      [reference, productId, warehouseId, qty, scheduledDate || new Date(), destination_location_id || null]
     );
     res.status(201).json({ receipt: result.rows[0] });
   } catch (err) {
@@ -61,9 +62,9 @@ exports.validateReceipt = async (req, res) => {
 
     // Insert into stock_ledger
     await pool.query(`
-      INSERT INTO stock_ledger (product_id, warehouse_id, movement_type, quantity, reference_type, reference_id)
-      VALUES ($1, $2, 'RECEIPT', $3, 'receipts', $4)
-    `, [receipt.product_id, receipt.warehouse_id, receipt.qty, receipt.reference]);
+      INSERT INTO stock_ledger (product_id, warehouse_id, movement_type, quantity, reference_type, reference_id, location_id)
+      VALUES ($1, $2, 'RECEIPT', $3, 'receipts', $4, $5)
+    `, [receipt.product_id, receipt.warehouse_id, receipt.qty, receipt.reference, receipt.destination_location_id]);
 
       // ++ Update actual product stock
       await pool.query(

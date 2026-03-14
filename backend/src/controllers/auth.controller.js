@@ -93,6 +93,15 @@ exports.sendOtp = async (req, res) => {
 // RESET PASSWORD
 exports.resetPassword = async (req, res) => {
   const { email, otp, newPassword } = req.body;
+
+  // Add password validation
+  if (!newPassword || newPassword.length <= 8) {
+    return res.status(400).json({ error: 'Password must be more than 8 characters.' });
+  }
+  if (!/[a-z]/.test(newPassword) || !/[A-Z]/.test(newPassword) || !/[!@#$%^&*(),.?":{}|<>]/.test(newPassword)) {
+    return res.status(400).json({ error: 'Password must contain a small case, a large case, and a special character.' });
+  }
+
   const user = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
 
   if (!user.rows.length)

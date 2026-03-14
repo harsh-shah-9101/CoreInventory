@@ -95,12 +95,25 @@ exports.updateStock = async (req, res) => {
 exports.getStockByLocation = async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT p.name AS product, p.unit_of_measure, w.name AS warehouse, w.location, 
+      SELECT p.name AS product, p.unit_of_measure, w.name AS warehouse,
+             COALESCE(l.name, 'Main/Default') AS location_name,
+             COALESCE(l.code, '-') AS location_code,
              COALESCE(sv.calculated_qty, 0) AS on_hand, 0 AS reserved, COALESCE(sv.calculated_qty, 0) AS available
       FROM products p
       CROSS JOIN warehouses w
-      LEFT JOIN current_stock_view sv ON sv.product_id = p.id AND sv.warehouse_id = w.id
-      ORDER BY p.name ASC, w.name ASC
+      LEFT JOIN (
+          SELECT id, name, code, warehouse_id FROM locations
+          UNION ALL
+          SELECT NULL::int as id, 'Main/Default' as name, '-' as code, id as warehouse_id FROM warehouses
+      ) l ON l.warehouse_id = w.id
+      LEFT JOIN current_location_stock_view sv 
+        ON sv.product_id = p.id 
+       AND sv.warehouse_id = w.id 
+       AND (sv.location_id = l.id OR (sv.location_id IS NULL AND l.id IS NULL))
+      WHERE l.id IS NOT NULL 
+         OR COALESCE(sv.calculated_qty, 0) > 0 
+         OR NOT EXISTS (SELECT 1 FROM locations loc WHERE loc.warehouse_id = w.id)
+      ORDER BY p.name ASC, w.name ASC, l.name ASC
     `);
     res.json({ stock: result.rows });
   } catch (err) {

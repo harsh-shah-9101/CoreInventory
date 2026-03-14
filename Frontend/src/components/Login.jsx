@@ -152,6 +152,11 @@ const Login = () => {
                 <> Sign In <ArrowRight size={15} strokeWidth={2} /></>
               )}
             </button>
+            <div style={{ textAlign: 'center', marginTop: '8px' }}>
+                <Link to="/forgot-password" style={{ fontSize: '0.8rem', color: '#3B82F6', fontWeight: 500, textDecoration: 'none' }}>
+                    Forgot Password?
+                </Link>
+            </div>
           </form>
 
           <p style={{ marginTop: '24px', fontSize: '0.8rem', color: '#A1A1AA', textAlign: 'center' }}>

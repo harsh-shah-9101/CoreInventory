@@ -3,10 +3,11 @@ const pool = require('../config/db');
 exports.getDeliveries = async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT d.*, p.name AS product_name, w.name AS warehouse_name
+      SELECT d.*, p.name AS product_name, p.category_id, w.name AS warehouse_name, l.name as source_location_name
       FROM deliveries d
       JOIN products p ON p.id = d.product_id
       JOIN warehouses w ON w.id = d.warehouse_id
+      LEFT JOIN locations l ON l.id = d.source_location_id
       ORDER BY d.created_at DESC
     `);
     res.json({ deliveries: result.rows });
@@ -17,7 +18,7 @@ exports.getDeliveries = async (req, res) => {
 };
 
 exports.createDelivery = async (req, res) => {
-  const { productId, warehouseId, qty, scheduledDate } = req.body;
+  const { productId, warehouseId, qty, scheduledDate, source_location_id } = req.body;
   if (!productId || !warehouseId || !qty) {
     return res.status(400).json({ error: 'Product, Warehouse, and Quantity are required' });
   }
@@ -25,9 +26,9 @@ exports.createDelivery = async (req, res) => {
   try {
     const reference = 'DEL-' + Date.now().toString().slice(-6); 
     const result = await pool.query(
-      `INSERT INTO deliveries (reference, product_id, warehouse_id, qty, status, scheduled_date)
-       VALUES ($1, $2, $3, $4, 'Draft', $5) RETURNING *`,
-      [reference, productId, warehouseId, qty, scheduledDate || new Date()]
+      `INSERT INTO deliveries (reference, product_id, warehouse_id, qty, status, scheduled_date, source_location_id)
+       VALUES ($1, $2, $3, $4, 'Draft', $5, $6) RETURNING *`,
+      [reference, productId, warehouseId, qty, scheduledDate || new Date(), source_location_id || null]
     );
     res.status(201).json({ delivery: result.rows[0] });
   } catch (err) {
@@ -58,23 +59,28 @@ exports.validateDelivery = async (req, res) => {
     }
 
     // Check available stock from view
-    const stockRes = await pool.query(
-      'SELECT calculated_qty FROM current_stock_view WHERE product_id = $1 AND warehouse_id = $2',
-      [delivery.product_id, delivery.warehouse_id]
-    );
+    let stockQuery = 'SELECT SUM(calculated_qty) as calculated_qty FROM current_location_stock_view WHERE product_id = $1 AND warehouse_id = $2';
+    let queryParams = [delivery.product_id, delivery.warehouse_id];
+    
+    if (delivery.source_location_id) {
+      stockQuery += ' AND location_id = $3';
+      queryParams.push(delivery.source_location_id);
+    }
 
-    const currentStock = stockRes.rows.length > 0 ? stockRes.rows[0].calculated_qty : 0;
+    const stockRes = await pool.query(stockQuery, queryParams);
+
+    const currentStock = stockRes.rows.length > 0 ? (stockRes.rows[0].calculated_qty || 0) : 0;
 
     if (currentStock < delivery.qty) {
       await pool.query('ROLLBACK');
-      return res.status(400).json({ error: `Not enough stock. Available: ${currentStock}, Requested: ${delivery.qty}` });
+      return res.status(400).json({ error: `Not enough stock${delivery.source_location_id ? ' at this location' : ''}. Available: ${currentStock}, Requested: ${delivery.qty}` });
     }
 
     // Insert into stock_ledger (Negative quantity for delivery)
     await pool.query(`
-      INSERT INTO stock_ledger (product_id, warehouse_id, movement_type, quantity, reference_type, reference_id)
-      VALUES ($1, $2, 'DELIVERY', $3, 'deliveries', $4)
-    `, [delivery.product_id, delivery.warehouse_id, -delivery.qty, delivery.reference]);
+      INSERT INTO stock_ledger (product_id, warehouse_id, movement_type, quantity, reference_type, reference_id, location_id)
+      VALUES ($1, $2, 'DELIVERY', $3, 'deliveries', $4, $5)
+    `, [delivery.product_id, delivery.warehouse_id, -delivery.qty, delivery.reference, delivery.source_location_id]);
 
     // ++ Update actual product stock
     await pool.query(
