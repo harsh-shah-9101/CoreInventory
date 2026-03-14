@@ -7,12 +7,12 @@ import api from '../services/api';
 import { Package, AlertTriangle, XCircle, Download, Truck, ArrowLeftRight, RefreshCw } from 'lucide-react';
 
 const KPI_CONFIG = [
-  { key: 'totalProducts',      title: 'Products in Stock',    icon: Package,          color: '#6c63ff', subtitle: 'Active SKUs with qty > 0' },
-  { key: 'lowStock',           title: 'Low Stock Items',       icon: AlertTriangle,     color: '#f59e0b', subtitle: 'Below reorder level' },
-  { key: 'outOfStock',         title: 'Out of Stock',          icon: XCircle,           color: '#ef4444', subtitle: 'Qty = 0' },
-  { key: 'pendingReceipts',    title: 'Pending Receipts',      icon: Download,          color: '#10b981', subtitle: 'Not yet Done/Canceled' },
-  { key: 'pendingDeliveries',  title: 'Pending Deliveries',    icon: Truck,             color: '#3b82f6', subtitle: 'Not yet Done/Canceled' },
-  { key: 'scheduledTransfers', title: 'Transfers Scheduled',   icon: ArrowLeftRight,    color: '#8b5cf6', subtitle: 'Internal moves pending' },
+  { key: 'totalProducts',      title: 'Products in Stock',    icon: Package,          color: '#6c63ff' },
+  { key: 'lowStock',           title: 'Low Stock Items',       icon: AlertTriangle,     color: '#f59e0b' },
+  { key: 'outOfStock',         title: 'Out of Stock',          icon: XCircle,           color: '#ef4444' },
+  { key: 'pendingReceipts',    title: 'Pending Receipts',      icon: Download,          color: '#10b981' },
+  { key: 'pendingDeliveries',  title: 'Pending Deliveries',    icon: Truck,             color: '#3b82f6' },
+  { key: 'scheduledTransfers', title: 'Transfers Scheduled',   icon: ArrowLeftRight,    color: '#8b5cf6' },
 ];
 
 const Dashboard = () => {
