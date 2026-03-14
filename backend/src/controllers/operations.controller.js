@@ -24,16 +24,79 @@ exports.updateStatus = async (req, res) => {
     return res.status(403).json({ error: `Your role cannot set status to "${status}" for ${type}` });
   }
 
+  const client = await pool.connect();
   try {
-    const result = await pool.query(
+    await client.query('BEGIN');
+
+    // Get current record to compare status
+    const currentRes = await client.query(`SELECT * FROM ${config.table} WHERE id = $1`, [id]);
+    if (!currentRes.rows.length) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Record not found' });
+    }
+    const currentRecord = currentRes.rows[0];
+
+    // Check if status is transitioning specifically to 'Done' and it wasn't 'Done' before
+    if (status === 'Done' && currentRecord.status !== 'Done') {
+      const pid = currentRecord.product_id;
+      const qty = type === 'adjustments' ? currentRecord.qty_change : currentRecord.qty;
+
+      if (type === 'deliveries') {
+        // Outgoing: decrease total stock and warehouse stock
+        await client.query('UPDATE products SET qty_on_hand = qty_on_hand - $1 WHERE id = $2', [qty, pid]);
+        await client.query(`
+          INSERT INTO product_stock (product_id, warehouse_id, qty) 
+          VALUES ($1, $2, -$3)
+          ON CONFLICT (product_id, warehouse_id) 
+          DO UPDATE SET qty = product_stock.qty - $3
+        `, [pid, currentRecord.warehouse_id, qty]);
+
+      } else if (type === 'receipts') {
+        // Incoming: increase total stock and warehouse stock
+        await client.query('UPDATE products SET qty_on_hand = qty_on_hand + $1 WHERE id = $2', [qty, pid]);
+        await client.query(`
+          INSERT INTO product_stock (product_id, warehouse_id, qty) 
+          VALUES ($1, $2, $3)
+          ON CONFLICT (product_id, warehouse_id) 
+          DO UPDATE SET qty = product_stock.qty + $3
+        `, [pid, currentRecord.warehouse_id, qty]);
+
+      } else if (type === 'transfers') {
+        // Internal Transfer: no change to total stock, but move between warehouses
+        await client.query(`UPDATE product_stock SET qty = qty - $1 WHERE product_id = $2 AND warehouse_id = $3`, 
+                            [qty, pid, currentRecord.from_warehouse_id]);
+        await client.query(`
+          INSERT INTO product_stock (product_id, warehouse_id, qty) 
+          VALUES ($1, $2, $3)
+          ON CONFLICT (product_id, warehouse_id) 
+          DO UPDATE SET qty = product_stock.qty + $3
+        `, [pid, currentRecord.to_warehouse_id, qty]);
+
+      } else if (type === 'adjustments') {
+        // Adjustments: change stock (qty is qty_change which already has +/- sign)
+        await client.query('UPDATE products SET qty_on_hand = qty_on_hand + $1 WHERE id = $2', [qty, pid]);
+        await client.query(`
+          INSERT INTO product_stock (product_id, warehouse_id, qty) 
+          VALUES ($1, $2, $3)
+          ON CONFLICT (product_id, warehouse_id) 
+          DO UPDATE SET qty = product_stock.qty + $3
+        `, [pid, currentRecord.warehouse_id, qty]);
+      }
+    }
+
+    const result = await client.query(
       `UPDATE ${config.table} SET status = $1 WHERE id = $2 RETURNING *`,
       [status, id]
     );
-    if (!result.rows.length) return res.status(404).json({ error: 'Record not found' });
+
+    await client.query('COMMIT');
     res.json({ message: 'Status updated', record: result.rows[0] });
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error(err);
     res.status(500).json({ error: 'Failed to update status' });
+  } finally {
+    client.release();
   }
 };
 

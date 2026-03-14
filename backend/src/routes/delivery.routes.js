@@ -1,3 +1,7 @@
 const router = require('express').Router();
-// TODO: Implement delivery routes
+const { createDelivery, getDeliveries } = require('../controllers/delivery.controller');
+
+router.get('/', getDeliveries);
+router.post('/', createDelivery);
+
 module.exports = router;
